@@ -1,0 +1,77 @@
+{
+  "name": "Gecko edc",
+  "logo": "/imgs/brands/gecko/gecko-logo.png",
+  "description": "在设计中寻找完美的黄金回旋。",
+  "backgroundImage": "/imgs/brands/gecko/gecko-bg-1.jpg",
+  "exhibitionNumber": "B12",
+  "exhibitionProducts": [
+    {
+      "productName": "锆 球鲨",
+      "productImage": "/imgs/brands/gecko/gecko-1.jpg",
+      "productDescription": "VIP玩家优先购买锆合金版，普通票玩家需现场抽签或先到先得（具体方式视情况而定）因总量较少，恳请大家理解！",
+      "productPrice": "998",
+      "productStock": "45"
+    },
+    {
+      "productName": "钛 球鲨",
+      "productImage": "/imgs/brands/gecko/gecko-2.jpg",
+      "productDescription": "",
+      "productPrice": "758",
+      "productStock": "17"
+    },
+    {
+      "productName": "钢 球鲨",
+      "productImage": "/imgs/brands/gecko/gecko-3.jpg",
+      "productDescription": "",
+      "productPrice": "698",
+      "productStock": "57"
+    },
+    {
+      "productName": "钛 撬棍",
+      "productImage": "/imgs/brands/gecko/gecko-4.jpg",
+      "productDescription": "展会限定",
+      "productPrice": "288",
+      "productStock": ""
+    },
+    {
+      "productName": "锆 撬棍",
+      "productImage": "/imgs/brands/gecko/gecko-5.jpg",
+      "productDescription": "展会限定",
+      "productPrice": "750",
+      "productStock": ""
+    },
+    {
+      "productName": "魔术贴（多款可选）",
+      "productImage": "/imgs/brands/gecko/gecko-6.jpg",
+      "productDescription": "",
+      "productPrice": "未知",
+      "productStock": ""
+    },
+    {
+      "productName": "海外淘来的趣味小周边",
+      "productImage": "/imgs/default/empty.png",
+      "productDescription": "",
+      "productPrice": "未知",
+      "productStock": ""
+    }
+  ],
+  "exhibitionGifts": [
+    {
+      "giftName": "Gecko魔术贴/火漆印章/Gecko贴纸/Gecko&Newbee产品图册",
+      "giftImage": "/imgs/default/gift.jpg",
+      "giftDescription": "在展台消费即有机会随机获得。部分商品数量有限，获取方式可能结合抽签与先到先得，还请早来碰运气！",
+      "productPrice": "0",
+      "giftStock": "先到先得"
+    }
+  ],
+  "relatedArticles": [
+    {
+      "title": "球鲨",
+      "link": "https://mp.weixin.qq.com/s/UCg8zufhf2NSiXC-Bfz4Nw"
+    },
+    {
+      "title": "GeckoEDC&北京E秀会B12展会说明",
+      "link": "https://mp.weixin.qq.com/s/23s7TSKzkiOEYUQJytc7dQ?click_id=56"
+    }
+  ]
+}

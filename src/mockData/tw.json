@@ -1,0 +1,91 @@
+{
+  "name": "TW edc",
+  "logo": "/imgs/brands/tw/tw-logo.jpg",
+  "description": "TWEDC （主理人：听闻）以「重力与优雅的交锋」为核心理念，通过精密机械美学演绎平衡哲学。代表作「云枢」陀螺以简约线条诠释旋转动态中的优雅张力，展现重力与精致设计的艺术碰撞。以「星瀚」系列为代表的旗舰作品持续探索重力交互与星空美学的边界。",
+  "backgroundImage": "/imgs/brands/tw/tw-bg.jpg",
+  "productImages": [
+    {
+      "src": "/imgs/brands/tw/tw-1.jpg",
+      "caption": "云枢"
+    }
+  ],
+  "exhibitionNumber": "A6",
+  "contact": {
+    "wechatQr": "/imgs/brands/tw/tw-wechat-qr.jpg",
+    "officialAccountQr": "/imgs/brands/tw/tw-official-qr.jpg",
+    "wechatId": "twedc_official",
+    "phone": "13800001111"
+  },
+  "exhibitionGifts": [
+    {
+      "giftName": "老玩家福利 & 互动礼",
+      "giftImage": "/imgs/default/gift.jpg",
+      "giftDescription": [
+        "1. 老友凭证：出示TW EDC历史订单，直接领限定周边",
+        "2. 现场挑战：参与现场活动解锁隐藏礼包",
+        "3. VIP特权：持VIP票免任务领基础周边"
+      ],
+      "giftStock": "先到先得"
+    }
+  ],
+  "exhibitionActivities": [
+    {
+      "type": "raffle",
+      "title": "抽奖风暴",
+      "description": "展位A06每日限时开启",
+      "schedule": {
+        "startAt": "2025-08-16",
+        "endAt": "2025-08-17"
+      },
+      "location": "A6",
+      "eligibility": [
+        "持当日门票到展位，关注官方dy账号即可领取一张抽奖券，持有购买记录，即可享有两张抽奖券，抽奖时段见现场公告。"
+      ],
+      "prizes": [
+        {
+          "name": "头奖：瑞粉定制名额",
+          "image": "/imgs/brands/tw/tw-1.jpg",
+          "quantity": 2
+        },
+        {
+          "name": "特材奖：四款特材云枢任选",
+          "quantity": 1
+        },
+        {
+          "name": "贝母奖：贝母镶嵌指定款",
+          "image": "/imgs/brands/tw/tw-2.jpg",
+          "quantity": 1
+        },
+        {
+          "name": "隐藏福利：无门槛大额优惠券随机掉落，手快有！",
+          "quantity": "未知"
+        }
+      ]
+    }
+  ],
+  "exhibitionExperience": [
+    {
+      "experienceName": "云枢上手体验",
+      "experienceImage": "/imgs/brands/tw/tw-1.jpg",
+      "experienceDescription": [
+        "核心手感演示：现场导师指导拨动技巧，体验重力与优雅的平衡。",
+        "材质对比：不锈钢/钛合金/贝母镶嵌不同手感差异。",
+        "转台试转：提供多款轴承与底座，测试稳定性与续转时间。"
+      ]
+    },
+    {
+      "experienceName": "星瀚系列微展台",
+      "experienceImage": "/imgs/brands/tw/tw-2.jpg",
+      "experienceDescription": [
+        "星空刻纹与夜光件展示。",
+        "限定配色与定制建议交流。"
+      ]
+    }
+  ],
+  "relatedArticles": [
+    {
+      "title": "参展定档｜8月16日-17日 · 北京EDC · 展位A06",
+      "link": "https://mp.weixin.qq.com/s/DKs9O3QSZX_UoZ1EEIJHZw"
+    }
+  ]
+}

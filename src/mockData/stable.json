@@ -1,0 +1,21 @@
+{
+  "name": "STABLE EDC",
+  "logo": "/imgs/brands/stable/stable-logo.jpg",
+  "description": "",
+  "exhibitionNumber": "B24",
+  "exhibitionProducts": [
+    {
+      "productName": "永恒鸟",
+      "productImage": "/imgs/brands/stable/stable-1.jpg",
+      "productDescription": "",
+      "productPrice": "未知",
+      "productStock": "1"
+    }
+  ],
+  "relatedArticles": [
+    {
+      "title": "北京展会一定要去的展位——B24！",
+      "link": "https://mp.weixin.qq.com/s/bO6vGW-ThqZ9g4HN9LiAqg"
+    }
+  ]
+}

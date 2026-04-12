@@ -1,0 +1,24 @@
+{
+  "name": "MOT",
+  "logo": "/imgs/brands/mot/mot-logo.jpg",
+  "description": "源于热爱，追求创新，打造自己心目中与众不同的EDC产品！",
+  "productImages": [
+    "/imgs/brands/mot/mot-1.jpg"
+  ],
+  "exhibitionNumber": "C0",
+  "exhibitionProducts": [
+    {
+      "productName": "神谕",
+      "productImage": "/imgs/brands/mot/mot-1.jpg",
+      "productDescription": "神谕",
+      "productPrice": "100",
+      "productStock": "100"
+    }
+  ],
+  "relatedArticles": [
+    {
+      "title": "展会文章",
+      "link": "https://www.baidu.com"
+    }
+  ]
+}
