@@ -11,6 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    BaseDialog: typeof import('./components/base/BaseDialog.vue')['default']
     BaseDivider: typeof import('./components/base/BaseDivider.vue')['default']
     BaseImageViewer: typeof import('./components/base/BaseImageViewer.vue')['default']
     BaseModal: typeof import('./components/base/BaseModal.vue')['default']
@@ -21,6 +22,7 @@ declare module 'vue' {
     BoothDetail: typeof import('./components/exhibition/BoothDetail.vue')['default']
     BrandEditModal: typeof import('./components/exhibition/BrandEditModal.vue')['default']
     BrandModal: typeof import('./components/exhibition/BrandModal.vue')['default']
+    DebugMapPanel: typeof import('./components/exhibition/DebugMapPanel.vue')['default']
     ElImage: typeof import('element-plus/es')['ElImage']
     ExhibitionActivities: typeof import('./components/exhibition/ExhibitionActivities.vue')['default']
     ExhibitionArticleItem: typeof import('./components/exhibition/ExhibitionArticleItem.vue')['default']
@@ -31,6 +33,8 @@ declare module 'vue' {
     ExhibitionFavoritesModal: typeof import('./components/exhibition/ExhibitionFavoritesModal.vue')['default']
     ExhibitionGiftItem: typeof import('./components/exhibition/ExhibitionGiftItem.vue')['default']
     ExhibitionInfoModal: typeof import('./components/exhibition/ExhibitionInfoModal.vue')['default']
+    ExhibitionLayout: typeof import('./components/exhibition/ExhibitionLayout.vue')['default']
+    ExhibitionMap: typeof import('./components/exhibition/ExhibitionMap.vue')['default']
     ExhibitionMenu: typeof import('./components/exhibition/ExhibitionMenu.vue')['default']
     ExhibitionMenuPicker: typeof import('./components/exhibition/ExhibitionMenuPicker.vue')['default']
     ExhibitionProductItem: typeof import('./components/exhibition/ExhibitionProductItem.vue')['default']

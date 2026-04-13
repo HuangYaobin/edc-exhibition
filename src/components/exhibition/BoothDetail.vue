@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import BaseTabs from '@/components/base/BaseTabs.vue'
+import BaseDialog from '@/components/base/BaseDialog.vue'
 import type { Booth } from '@/api/types'
 
 const props = defineProps<{
@@ -10,28 +12,17 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
-const primaryBrand = computed(() => {
-  if (!props.booth?.brands?.length) return null
-  return props.booth.brands[0]
+const activeIndex = ref(0)
+
+watch(() => props.booth, () => {
+  activeIndex.value = 0
 })
 
-const secondaryBrand = computed(() => {
-  if (!props.booth?.brands || props.booth.brands.length < 2) return null
-  return props.booth.brands[1]
-})
+const brands = computed(() => props.booth?.brands ?? [])
+const activeBrand = computed(() => brands.value[activeIndex.value] ?? null)
+const hasMultipleBrands = computed(() => brands.value.length > 1)
 
-const formattedBoothNumber = computed(() => {
-  return props.booth?.boothNumber || ''
-})
-
-const stats = computed(() => {
-  if (!props.booth) return []
-  const result = []
-  if (props.booth.products?.length) {
-    result.push({ value: props.booth.products.length.toString(), label: '展品数量' })
-  }
-  return result
-})
+const formattedBoothNumber = computed(() => props.booth?.boothNumber || '')
 
 function handleImageError(e: Event) {
   const target = e.target as HTMLImageElement
@@ -39,466 +30,134 @@ function handleImageError(e: Event) {
   const placeholder = target.nextElementSibling as HTMLElement
   if (placeholder) placeholder.style.display = 'flex'
 }
+
+// Description overflow detection
+const descriptionEl = ref<HTMLParagraphElement | null>(null)
+const isClamped = ref(false)
+const showDescDialog = ref(false)
+
+function checkClamped() {
+  nextTick(() => {
+    if (descriptionEl.value) {
+      isClamped.value = descriptionEl.value.scrollHeight > descriptionEl.value.clientHeight + 1
+    }
+  })
+}
+
+watch(activeBrand, () => {
+  showDescDialog.value = false
+  checkClamped()
+})
+
+onMounted(() => {
+  checkClamped()
+})
 </script>
 
 <template>
-  <div v-if="booth" class="booth-detail">
-    <div class="detail-header">
-      <div class="booth-number">展位号: {{ formattedBoothNumber }}</div>
-      
-      <div class="tags-row">
-        <span v-if="primaryBrand" class="tag tag-primary">
-          <i class="i-carbon-cube"></i>
-          {{ primaryBrand.name }}
-        </span>
-        <span v-if="secondaryBrand" class="tag tag-secondary">
-          {{ secondaryBrand.name }}
-        </span>
-      </div>
+  <div v-if="booth"
+    class="max-h-[50vh] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+    <!-- Brand tabs — only shown when multiple brands -->
+    <BaseTabs v-if="hasMultipleBrands" v-model="activeIndex" :items="brands">
+      <template #tab="{ item, isActive }">
+        <div class="w-4 h-4 rounded-sm overflow-hidden bg-zinc-900 flex items-center justify-center shrink-0">
+          <img v-if="item.logoUrl" :src="item.logoUrl" :alt="item.name" class="w-full h-full object-contain" />
+          <i v-else class="i-carbon-building text-zinc-500 text-[10px]" />
+        </div>
+        <span class="truncate max-w-28" :class="isActive ? 'text-zinc-100' : 'text-zinc-500'">{{ item.name }}</span>
+      </template>
+    </BaseTabs>
 
-      <div v-if="primaryBrand" class="brand-intro-card">
-        <div class="brand-logo">
-          <img :src="primaryBrand.logoUrl" :alt="primaryBrand.name" @error="handleImageError" />
-          <div class="logo-placeholder" style="display: none;">
-            <i class="i-carbon-building"></i>
+    <div class="bg-zinc-900 rounded-lg overflow-hidden ">
+      <!-- Brand header -->
+      <div v-if="activeBrand" class="relative flex gap-4 items-start p-4 pb-2 border-b border-zinc-800">
+        <!-- Booth number — absolute top-right -->
+        <span v-if="formattedBoothNumber"
+          class="absolute top-3 right-3 inline-flex items-center gap-1 text-[10px] font-medium text-zinc-500 bg-zinc-800 border border-zinc-700 rounded-full px-2 py-0.5">
+          <i class="i-carbon-location text-zinc-600 text-[10px]" />
+          {{ formattedBoothNumber }}
+        </span>
+        <!-- Logo -->
+        <div class="w-14 h-14 rounded-xl overflow-hidden bg-zinc-800 flex items-center justify-center shrink-0">
+          <img :src="activeBrand.logoUrl" :alt="activeBrand.name" class="w-full h-full object-contain"
+            @error="handleImageError" />
+          <div class="w-full h-full items-center justify-center text-zinc-600 text-2xl" style="display: none;">
+            <i class="i-carbon-building" />
           </div>
         </div>
-        <div class="brand-info">
-          <h3 class="brand-name">{{ primaryBrand.name }}</h3>
-          <p v-if="primaryBrand.description" class="brand-desc">{{ primaryBrand.description }}</p>
-          <p v-else class="brand-desc placeholder">暂无品牌介绍</p>
+
+        <!-- Brand info -->
+        <div class="flex-1 min-w-0 py-0.5">
+          <h3 class="text-zinc-100 font-semibold text-base m-0 mb-1.5 leading-tight truncate">
+            {{ activeBrand.name }}
+          </h3>
+          <!-- fixed 2-line height so layout never shifts -->
+          <div class="relative h-[2.4375rem]">
+            <template v-if="activeBrand.description">
+              <p ref="descriptionEl" class="text-zinc-500 text-xs leading-relaxed m-0 line-clamp-2">
+                {{ activeBrand.description }}
+              </p>
+              <!-- "查看更多" fades in at bottom-right when text is clamped -->
+              <button v-if="isClamped"
+                class="absolute bottom-0 right-0 text-[10px] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer border-none bg-transparent p-0 leading-[1.625] pl-6"
+                style="background: linear-gradient(to right, transparent, #18181b 40%)"
+                @click.stop="showDescDialog = true">
+                查看更多
+              </button>
+            </template>
+            <p v-else class="text-zinc-700 text-xs italic m-0 leading-relaxed">
+              暂无品牌介绍
+            </p>
+          </div>
+
+          <!-- Description dialog -->
+          <BaseDialog v-model:visible="showDescDialog" :title="activeBrand.name">
+            <p class="text-zinc-400 text-sm leading-relaxed m-0">
+              {{ activeBrand.description }}
+            </p>
+          </BaseDialog>
         </div>
       </div>
 
-      <div v-if="stats.length" class="stats-row">
-        <div v-for="stat in stats" :key="stat.label" class="stat-item">
-          <div class="stat-value">{{ stat.value }}</div>
-          <div class="stat-label">{{ stat.label }}</div>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="booth.products?.length" class="products-section">
-      <div class="section-header">
-        <h4 class="section-title">核心产品</h4>
-        <span class="section-subtitle">PRODUCTS</span>
-      </div>
-      
-      <div class="products-list">
-        <div 
-          v-for="(product, index) in booth.products" 
-          :key="product.id || index"
-          class="product-card"
-        >
-          <div class="product-image-wrapper">
-            <img :src="product.imageUrl" :alt="product.name" class="product-image" @error="handleImageError" />
-            <div class="image-placeholder" style="display: none;">
-              <i class="i-carbon-image"></i>
+      <!-- Products list -->
+      <div v-if="booth.products?.length" class="flex flex-col gap-3 p-4">
+        <div v-for="(product, index) in booth.products" :key="product.id || index"
+          class="flex rounded-xl bg-zinc-800 border border-zinc-700 overflow-hidden hover:border-zinc-600 transition-colors duration-200">
+          <!-- Image — left side -->
+          <div class="w-36 shrink-0 bg-zinc-700 relative overflow-hidden">
+            <img :src="product.imageUrl" :alt="product.name" class="w-full h-full object-cover absolute inset-0"
+              @error="handleImageError" />
+            <div class="absolute inset-0 items-center justify-center text-zinc-700 text-3xl" style="display: none;">
+              <i class="i-carbon-image" />
             </div>
           </div>
-          
-          <div class="product-info">
-            <h5 class="product-name">{{ product.name }}</h5>
-            <p v-if="product.description" class="product-desc">
-              {{ product.description }}
-            </p>
-            <div class="product-footer">
-              <span v-if="product.price" class="product-price">
+
+          <!-- Info — right side -->
+          <div class="flex-1 min-w-0 p-3 flex flex-col justify-between gap-2">
+            <div class="flex flex-col gap-1.5">
+              <h5 class="text-zinc-100 font-semibold text-sm m-0 leading-snug line-clamp-2">
+                {{ product.name }}
+              </h5>
+              <p v-if="product.description" class="text-zinc-500 text-xs leading-relaxed m-0 line-clamp-3">
+                {{ product.description }}
+              </p>
+            </div>
+
+            <div class="flex items-center justify-between mt-auto">
+              <span v-if="product.price" class="text-amber-400 font-bold text-base leading-none">
                 ¥{{ (product.price / 100).toFixed(2) }}
               </span>
-              <button class="detail-btn">
-                了解详情
-                <i class="i-carbon-arrow-right"></i>
-              </button>
+              <span v-else class="flex-1" />
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Empty state -->
+      <div v-else class="flex flex-col items-center justify-center gap-2 py-10 text-zinc-700">
+        <i class="i-carbon-package text-3xl" />
+        <span class="text-xs">暂无展品</span>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.booth-detail {
-  background: #fff;
-  border-radius: 16px;
-  overflow: hidden;
-  max-height: 50vh;
-  overflow-y: auto;
-}
-
-/* 头部信息 */
-.detail-header {
-  padding: 20px;
-  background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%);
-}
-
-.booth-number {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1a1a2e;
-  margin-bottom: 12px;
-}
-
-.tags-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-
-.tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.tag-primary {
-  background: #1a1a2e;
-  color: #fff;
-}
-
-.tag-secondary {
-  background: #e8e8f0;
-  color: #666;
-}
-
-/* 品牌简介卡片 */
-.brand-intro-card {
-  display: flex;
-  gap: 16px;
-  padding: 16px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  margin-bottom: 16px;
-}
-
-.brand-logo {
-  width: 64px;
-  height: 64px;
-  flex-shrink: 0;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #f5f5f5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.brand-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.brand-logo :deep(.el-image) {
-  width: 100%;
-  height: 100%;
-}
-
-.logo-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #999;
-  font-size: 24px;
-}
-
-.brand-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.brand-name {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1a1a2e;
-  margin: 0 0 8px;
-}
-
-.brand-desc {
-  font-size: 13px;
-  color: #666;
-  line-height: 1.6;
-  margin: 0;
-}
-
-.brand-desc.placeholder {
-  color: #999;
-  font-style: italic;
-}
-
-/* 统计数据 */
-.stats-row {
-  display: flex;
-  gap: 24px;
-  padding: 0 8px;
-}
-
-.stat-item {
-  text-align: center;
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1a1a2e;
-  line-height: 1.2;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #999;
-  margin-top: 4px;
-}
-
-/* 产品区域 */
-.products-section,
-.articles-section,
-.gifts-section {
-  padding: 20px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.section-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1a1a2e;
-  margin: 0;
-}
-
-.section-subtitle {
-  font-size: 11px;
-  color: #999;
-  font-weight: 500;
-  letter-spacing: 1px;
-}
-
-/* 产品卡片 */
-.products-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.product-card {
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid #f0f0f0;
-}
-
-.product-image-wrapper {
-  position: relative;
-  width: 100%;
-  height: 180px;
-  background: #f8f8f8;
-  overflow: hidden;
-}
-
-.product-image {
-  width: 100%;
-  height: 100%;
-}
-
-.product-image :deep(img) {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.image-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ccc;
-  font-size: 32px;
-}
-
-.stock-badge {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 500;
-  background: #52c41a;
-  color: #fff;
-}
-
-.stock-badge.hot {
-  background: #ff4d4f;
-}
-
-.product-info {
-  padding: 16px;
-}
-
-.product-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1a1a2e;
-  margin: 0 0 8px;
-}
-
-.product-desc {
-  font-size: 13px;
-  color: #666;
-  line-height: 1.5;
-  margin: 0 0 12px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.product-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.product-price {
-  font-size: 18px;
-  font-weight: 700;
-  color: #ff6b6b;
-}
-
-.detail-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 8px;
-  background: #1a1a2e;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.detail-btn:hover {
-  background: #2d2d44;
-}
-
-/* 文章列表 */
-.articles-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.article-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: #f8f9ff;
-  border-radius: 8px;
-  text-decoration: none;
-  transition: all 0.2s;
-}
-
-.article-item:hover {
-  background: #e8e8f5;
-}
-
-.article-title {
-  font-size: 14px;
-  color: #1a1a2e;
-  font-weight: 500;
-}
-
-.article-item i {
-  color: #999;
-  font-size: 14px;
-}
-
-/* 礼品区域 */
-.gifts-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.gift-card {
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-  background: #fffbf0;
-  border-radius: 12px;
-  border: 1px solid #ffe4b5;
-}
-
-.gift-image-wrapper {
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
-  overflow: hidden;
-  flex-shrink: 0;
-  background: #f5f5f5;
-}
-
-.gift-image {
-  width: 100%;
-  height: 100%;
-}
-
-.gift-image :deep(img) {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.gift-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.gift-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1a1a2e;
-  margin: 0 0 4px;
-}
-
-.gift-desc {
-  font-size: 12px;
-  color: #666;
-  line-height: 1.4;
-  margin: 0 0 4px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.gift-stock {
-  font-size: 11px;
-  color: #ff9500;
-  font-weight: 500;
-}
-</style>
