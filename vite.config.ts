@@ -6,10 +6,10 @@ import UnoCSS from 'unocss/vite'
 import svgLoader from 'vite-svg-loader'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     vue(),
@@ -20,15 +20,25 @@ export default defineConfig({
     AutoImport({
       imports: ['vue', 'pinia'],
       dts: 'src/auto-imports.d.ts',
+      resolvers: [ElementPlusResolver()],
     }),
     Components({
       dirs: ['src/components'],
       dts: 'src/components.d.ts',
+      resolvers: [ElementPlusResolver()],
     }),
   ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
+    },
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
     },
   },
 })
