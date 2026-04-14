@@ -12,6 +12,7 @@ import BaseTabBar from '@/components/base/BaseTabBar.vue'
 import type { TabBarItem } from '@/components/base/BaseTabBar.vue'
 import { getBoothByNumber } from '@/api'
 import type { Booth } from '@/api/types'
+import { useWishlist } from '@/composables/useWishlist'
 
 const mapRef = ref<InstanceType<typeof ExhibitionMap> | null>(null)
 
@@ -30,7 +31,12 @@ const tabItems: TabBarItem[] = [
   // { key: 'chat', label: '聊天室', icon: 'i-carbon-chat' },
 ]
 
-onMounted(() => fetchBoothData('B01'))
+const { loadWishlist } = useWishlist()
+
+onMounted(() => {
+  fetchBoothData('B01')
+  loadWishlist()
+})
 
 async function fetchBoothData(id: string) {
   loadingBooth.value = true

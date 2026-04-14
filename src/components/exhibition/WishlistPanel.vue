@@ -1,47 +1,59 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useWishlist } from '@/composables/useWishlist'
-
-type FilterMode = 'pending' | 'purchased' | 'all'
-type SortMode = 'price' | 'brand'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useWishlist, type SortBy, type PurchasedFilter } from '@/composables/useWishlist'
 
 const emit = defineEmits<{
   (e: 'highlight-booth', boothNumber: string, brandName?: string): void
 }>()
 
-const { wishlistItems, removeFromWishlist, markAsPurchased, unmarkAsPurchased } = useWishlist()
+const {
+  wishlistItems,
+  removeFromWishlist,
+  markAsPurchased,
+  unmarkAsPurchased,
+  loadWishlist,
+  pendingItems,
+  purchasedItems,
+  pendingTotal,
+  allItems,
+  isLoading,
+} = useWishlist()
 
-const filterMode = ref<FilterMode>('pending')
-const sortMode = ref<SortMode>('price')
+onMounted(() => {
+  loadWishlist(true)
+})
 
-// Track items in the process of being marked purchased so the leave animation
-// has a brief visual "purchased" moment before the item disappears from the list.
+const filterMode = ref<'pending' | 'purchased' | 'all'>('pending')
+const sortMode = ref<SortBy>('price')
+
+function getPurchasedFilter(mode: 'pending' | 'purchased' | 'all'): PurchasedFilter {
+  if (mode === 'pending') return 'false'
+  if (mode === 'purchased') return 'true'
+  return 'all'
+}
+
+watch([filterMode, sortMode], ([newFilter, newSort]) => {
+  loadWishlist(true, newSort, 'desc', getPurchasedFilter(newFilter))
+})
+
 const pendingPurchaseIds = ref<Set<string>>(new Set())
-
-const pendingItems = computed(() => wishlistItems.value.filter(i => !i.purchased))
-const purchasedItems = computed(() => wishlistItems.value.filter(i => i.purchased))
-
-const pendingTotal = computed(() =>
-  pendingItems.value.reduce((sum, item) => sum + (item.productPrice ?? 0), 0),
-)
 
 const filteredItems = computed(() => {
   const pids = pendingPurchaseIds.value
   let list: typeof wishlistItems.value
+  
   if (filterMode.value === 'all') {
     list = [...wishlistItems.value]
-  }
-  else if (filterMode.value === 'purchased') {
-    list = [...purchasedItems.value]
-  }
-  else {
-    // Keep items that are visually "in flight" (just marked, animation pending)
+  } else if (filterMode.value === 'purchased') {
+    list = [...wishlistItems.value]
+  } else {
     const alreadyPending = wishlistItems.value.filter(i => i.purchased && pids.has(i.productId))
-    list = [...pendingItems.value, ...alreadyPending]
+    list = [...wishlistItems.value.filter(i => !i.purchased), ...alreadyPending]
   }
 
-  if (sortMode.value === 'price')
+  if (sortMode.value === 'price') {
     return list.sort((a, b) => (b.productPrice ?? 0) - (a.productPrice ?? 0))
+  }
   return list.sort((a, b) => a.brandName.localeCompare(b.brandName))
 })
 
@@ -58,9 +70,6 @@ function handleImageError(e: Event) {
 }
 
 function handleMarkPurchased(productId: string) {
-  // First only add to pending — this drives the visual transition (bg, text, badge).
-  // The actual purchased flag is set after the transition plays, which then triggers
-  // the leave animation as the item drops out of the filtered list.
   pendingPurchaseIds.value = new Set([...pendingPurchaseIds.value, productId])
   setTimeout(() => {
     markAsPurchased(productId)
@@ -84,8 +93,8 @@ function handleRowClick(boothNumber: string, brandName?: string) {
 
 <template>
   <div class="h-full flex flex-col overflow-hidden bg-zinc-800 rounded-xl">
-    <!-- Empty state -->
-    <div v-if="wishlistItems.length === 0"
+    <!-- Empty state - 全部数据为空 -->
+    <div v-if="allItems.length === 0 && !isLoading"
       class="flex flex-col items-center justify-center gap-4 py-16 px-6 text-center flex-1">
       <div class="w-16 h-16 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center">
         <i class="i-carbon-favorite text-3xl text-zinc-600" />
@@ -144,9 +153,9 @@ function handleRowClick(boothNumber: string, brandName?: string) {
         </div>
         <div class="flex items-center gap-1">
           <button v-for="({ key, label }) in ([
-            { key: 'price', label: '按价格' },
-            { key: 'brand', label: '按品牌' },
-          ] as const)" :key="key" class="text-[11px] px-2 py-1 rounded-full transition-colors cursor-pointer border"
+            { key: 'price' as const, label: '按价格' },
+            { key: 'brand' as const, label: '按品牌' },
+          ])" :key="key" class="text-[11px] px-2 py-1 rounded-full transition-colors cursor-pointer border"
             :class="sortMode === key
               ? 'bg-zinc-700 text-zinc-300 border-zinc-600'
               : 'bg-transparent text-zinc-600 border-transparent hover:text-zinc-400'" @click="sortMode = key">
@@ -157,11 +166,19 @@ function handleRowClick(boothNumber: string, brandName?: string) {
 
       <!-- Item list -->
       <div class="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
-        <div v-if="filteredItems.length === 0"
+        <!-- Loading state -->
+        <div v-if="isLoading"
+          class="flex flex-col items-center justify-center gap-2 py-12">
+          <div class="w-6 h-6 border-2 border-zinc-600 border-t-amber-400 rounded-full animate-spin" />
+          <span class="text-xs text-zinc-500">加载中...</span>
+        </div>
+
+        <!-- Filtered empty state -->
+        <div v-else-if="filteredItems.length === 0"
           class="flex flex-col items-center justify-center gap-2 py-12 px-6 text-center">
           <i class="i-carbon-checkmark-outline text-2xl text-zinc-600" />
           <p class="text-xs text-zinc-600 m-0">
-            {{ filterMode === 'purchased' ? '还没有已购入的商品' : '所有商品已购入 ✓' }}
+            {{ filterMode === 'purchased' ? '还没有已购入的商品' : filterMode === 'pending' ? '所有商品已购入 ✓' : '没有符合条件的商品' }}
           </p>
         </div>
 

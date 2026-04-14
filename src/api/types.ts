@@ -17,6 +17,7 @@ export interface BoothProduct {
   imageUrl?: string
   price?: number
   quantity?: number
+  wishlistCount?: number
   sort: number
 }
 
@@ -89,4 +90,28 @@ export interface Exhibition {
   organizer?: string
   contactPhone?: string
   contactEmail?: string
+}
+
+export interface ProductWishlistResponse {
+  isInWishlist: boolean
+  wishlistCount: number
+}
+
+export interface WishlistItem {
+  id: string
+  productId: string
+  productName: string
+  productImage?: string | null
+  productPrice?: number | null
+  boothId: string
+  boothNumber: string
+  brandName: string
+  purchased: boolean
+  addedAt: string
+}
+
+export interface WishlistListResponse {
+  list: WishlistItem[]
+  total: number
+  hasMore: boolean
 }

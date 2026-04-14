@@ -16,7 +16,7 @@ function handleImageError(e: Event) {
   if (placeholder) placeholder.style.display = 'flex'
 }
 
-const { isInWishlist, toggleWishlist } = useWishlist()
+const { wishlistProductIds, toggleWishlist } = useWishlist()
 </script>
 
 <template>
@@ -30,7 +30,7 @@ const { isInWishlist, toggleWishlist } = useWishlist()
         <i class="i-carbon-image" />
       </div>
     </div>
-
+    
     <!-- Info -->
     <div class="flex-1 min-w-0 p-3 flex flex-col justify-between gap-2">
       <div class="flex flex-col gap-1.5">
@@ -53,12 +53,13 @@ const { isInWishlist, toggleWishlist } = useWishlist()
             {{ product.quantity == null ? '不限量' : product.quantity > 0 ? `限量 ${product.quantity} 件` : '已售罄' }}
           </span>
         </div>
-        <FavoriteButton :active="isInWishlist(product.id)" title-on="移出心愿单" title-off="加入心愿单" size-class="text-sm"
+        <FavoriteButton :active="wishlistProductIds.includes(product.id)" title-on="移出心愿单" title-off="加入心愿单" size-class="text-sm"
           @toggle="toggleWishlist({
             productId: product.id,
             productName: product.name,
             productImage: product.imageUrl,
             productPrice: product.price,
+            boothId: product.boothId,
             boothNumber,
             brandName,
           })" />

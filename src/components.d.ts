@@ -46,6 +46,7 @@ declare module 'vue' {
     ExhibitionProductItem: typeof import('./components/exhibition/ExhibitionProductItem.vue')['default']
     FavoriteButton: typeof import('./components/base/FavoriteButton.vue')['default']
     LeaderboardPanel: typeof import('./components/exhibition/LeaderboardPanel.vue')['default']
+    LikeButton: typeof import('./components/base/LikeButton.vue')['default']
     ProductEditDialog: typeof import('./components/exhibition/ProductEditDialog.vue')['default']
     ProductGallery: typeof import('./components/exhibition/ProductGallery.vue')['default']
     WishlistPanel: typeof import('./components/exhibition/WishlistPanel.vue')['default']
