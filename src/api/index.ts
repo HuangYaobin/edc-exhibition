@@ -1,4 +1,5 @@
-import type { Booth, Exhibition } from './types'
+import type { Booth, Exhibition, LeaderboardData, UpdateBrandPayload, UpsertProductPayload } from './types'
+import mockLeaderboard from '@/mockData/leaderboard.json'
 
 const API_BASE = '/api'
 
@@ -31,6 +32,17 @@ export async function getBoothById(id: string): Promise<Booth | null> {
   return res.json()
 }
 
+export async function getLeaderboard(): Promise<LeaderboardData> {
+  try {
+    const res = await fetch(`${API_BASE}/exhibition/leaderboard`)
+    if (!res.ok) throw new Error('not ok')
+    const response = await res.json()
+    return response.data || response
+  }
+  catch {
+    return mockLeaderboard as LeaderboardData
+  }
+}
 export async function getAllBooths(exhibitionId?: string): Promise<Booth[]> {
   const params = new URLSearchParams()
   if (exhibitionId) {
@@ -42,4 +54,38 @@ export async function getAllBooths(exhibitionId?: string): Promise<Booth[]> {
   const response = await res.json()
   const data = response.data || response
   return Array.isArray(data) ? data : []
+}
+
+export async function updateBrand(brandId: string, payload: UpdateBrandPayload): Promise<void> {
+  const res = await fetch(`${API_BASE}/exhibition/brands/${encodeURIComponent(brandId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error(`更新品牌信息失败: ${res.status}`)
+}
+
+export async function createProduct(boothId: string, payload: UpsertProductPayload): Promise<void> {
+  const res = await fetch(`${API_BASE}/exhibition/booths/${encodeURIComponent(boothId)}/products`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error(`创建展品失败: ${res.status}`)
+}
+
+export async function updateProduct(productId: string, payload: UpsertProductPayload): Promise<void> {
+  const res = await fetch(`${API_BASE}/exhibition/products/${encodeURIComponent(productId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error(`更新展品失败: ${res.status}`)
+}
+
+export async function deleteProduct(productId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/exhibition/products/${encodeURIComponent(productId)}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) throw new Error(`删除展品失败: ${res.status}`)
 }

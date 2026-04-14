@@ -8,7 +8,7 @@ const emit = defineEmits<{
 
 const DEBUG_BOOTHS = ['B01', 'B05', 'B60', 'C59', 'A01'] as const
 
-const visible = ref(true)
+const visible = ref(false)
 
 function toggle() {
   visible.value = !visible.value

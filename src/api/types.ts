@@ -5,6 +5,7 @@ export interface BoothBrand {
   nameEn?: string
   description?: string
   logoUrl?: string
+  wechatQrUrl?: string
   sort: number
 }
 
@@ -15,6 +16,7 @@ export interface BoothProduct {
   description?: string
   imageUrl?: string
   price?: number
+  quantity?: number
   sort: number
 }
 
@@ -35,6 +37,44 @@ export interface Booth {
   }
   brands: BoothBrand[]
   products: BoothProduct[]
+}
+
+export interface ProductRankItem {
+  productId: string
+  productName: string
+  productImage?: string
+  boothNumber: string
+  brandName: string
+  wishlistCount: number
+}
+
+export interface BoothRankItem {
+  boothNumber: string
+  brandName: string
+  brandLogo?: string
+  checkinCount: number
+}
+
+export interface LeaderboardData {
+  hotProducts: ProductRankItem[]
+  hotBooths: BoothRankItem[]
+  updatedAt: number
+}
+
+export interface UpdateBrandPayload {
+  name?: string
+  nameEn?: string
+  description?: string
+  logoUrl?: string
+  wechatQrUrl?: string
+}
+
+export interface UpsertProductPayload {
+  name: string
+  description?: string
+  imageUrl?: string
+  price?: number
+  quantity?: number
 }
 
 export interface Exhibition {

@@ -1,0 +1,147 @@
+{
+  "hotProducts": [
+    {
+      "productId": "prod-001",
+      "productName": "Benchmade 940-2 Osborne 钛柄折叠刀",
+      "productImage": "",
+      "boothNumber": "A01",
+      "brandName": "Benchmade",
+      "wishlistCount": 218
+    },
+    {
+      "productId": "prod-002",
+      "productName": "Olight Warrior 3S 战术手电筒 2300lm",
+      "productImage": "",
+      "boothNumber": "B03",
+      "brandName": "Olight",
+      "wishlistCount": 195
+    },
+    {
+      "productId": "prod-003",
+      "productName": "Leatherman Wave+ 多功能工具钳",
+      "productImage": "",
+      "boothNumber": "B03",
+      "brandName": "Leatherman",
+      "wishlistCount": 174
+    },
+    {
+      "productId": "prod-004",
+      "productName": "CRKT Provoke 旋转战术折刀",
+      "productImage": "",
+      "boothNumber": "C02",
+      "brandName": "CRKT",
+      "wishlistCount": 161
+    },
+    {
+      "productId": "prod-005",
+      "productName": "Fenix PD36R Pro 可充电手电 2800lm",
+      "productImage": "",
+      "boothNumber": "D04",
+      "brandName": "Fenix",
+      "wishlistCount": 143
+    },
+    {
+      "productId": "prod-006",
+      "productName": "Victorinox SwissChamp 豪华瑞士军刀",
+      "productImage": "",
+      "boothNumber": "A02",
+      "brandName": "Victorinox",
+      "wishlistCount": 132
+    },
+    {
+      "productId": "prod-007",
+      "productName": "Spyderco Paramilitary 2 G10 折刀",
+      "productImage": "",
+      "boothNumber": "A03",
+      "brandName": "Spyderco",
+      "wishlistCount": 120
+    },
+    {
+      "productId": "prod-008",
+      "productName": "Streamlight TLR-1 HL 战术灯",
+      "productImage": "",
+      "boothNumber": "C01",
+      "brandName": "Streamlight",
+      "wishlistCount": 108
+    },
+    {
+      "productId": "prod-009",
+      "productName": "Gerber StrongArm 固定刃战术刀",
+      "productImage": "",
+      "boothNumber": "D02",
+      "brandName": "Gerber",
+      "wishlistCount": 97
+    },
+    {
+      "productId": "prod-010",
+      "productName": "Nitecore TM9K TAC 9500lm 手电筒",
+      "productImage": "",
+      "boothNumber": "B02",
+      "brandName": "Nitecore",
+      "wishlistCount": 88
+    }
+  ],
+  "hotBooths": [
+    {
+      "boothNumber": "B03",
+      "brandName": "Olight",
+      "brandLogo": "",
+      "checkinCount": 342
+    },
+    {
+      "boothNumber": "A01",
+      "brandName": "Benchmade",
+      "brandLogo": "",
+      "checkinCount": 289
+    },
+    {
+      "boothNumber": "C02",
+      "brandName": "CRKT",
+      "brandLogo": "",
+      "checkinCount": 251
+    },
+    {
+      "boothNumber": "A02",
+      "brandName": "Victorinox",
+      "brandLogo": "",
+      "checkinCount": 234
+    },
+    {
+      "boothNumber": "D04",
+      "brandName": "Fenix",
+      "brandLogo": "",
+      "checkinCount": 198
+    },
+    {
+      "boothNumber": "A03",
+      "brandName": "Spyderco",
+      "brandLogo": "",
+      "checkinCount": 187
+    },
+    {
+      "boothNumber": "C01",
+      "brandName": "Streamlight",
+      "brandLogo": "",
+      "checkinCount": 165
+    },
+    {
+      "boothNumber": "B02",
+      "brandName": "Nitecore",
+      "brandLogo": "",
+      "checkinCount": 143
+    },
+    {
+      "boothNumber": "D02",
+      "brandName": "Gerber",
+      "brandLogo": "",
+      "checkinCount": 121
+    },
+    {
+      "boothNumber": "B01",
+      "brandName": "Leatherman",
+      "brandLogo": "",
+      "checkinCount": 109
+    }
+  ],
+  "updatedAt": 1744588800000
+}

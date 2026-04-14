@@ -58,29 +58,21 @@ const handleClick = () => {
 
 <template>
   <button
-    class="relative inline-flex items-center justify-center p-1.5 transition-colors text-slate-600 dark:text-slate-300 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
-    :title="active ? titleOn : titleOff"
-    :aria-pressed="active"
-    aria-label="加入/取消意向"
-    @click="handleClick"
-  >
-    <i :class="[active ? 'i-carbon-favorite-filled text-rose-500' : 'i-carbon-favorite text-slate-500', sizeClass]" :aria-hidden="true"></i>
+    class="relative inline-flex items-center justify-center p-1.5 transition-colors text-slate-600 dark:text-slate-300 cursor-pointer rounded"
+    :title="active ? titleOn : titleOff" :aria-pressed="active" aria-label="加入/取消意向" @click="handleClick">
+    <i :class="[active ? 'i-carbon-favorite-filled text-rose-500' : 'i-carbon-favorite text-slate-500', sizeClass]"
+      :aria-hidden="true"></i>
 
     <!-- Bubble hearts when toggling on -->
     <span v-if="showBubble" class="pointer-events-none absolute inset-0">
-      <i
-        v-for="p in particles"
-        :key="p.id"
-        class="bubble-heart i-carbon-favorite-filled text-rose-400/90 absolute"
+      <i v-for="p in particles" :key="p.id" class="bubble-heart i-carbon-favorite-filled text-rose-400/90 absolute"
         :style="{
           '--tx': p.tx + 'px',
           '--ty': p.ty + 'px',
           '--scale': String(p.scale),
           '--rot': p.rotate + 'deg',
           animationDelay: p.delay + 'ms',
-        } as any"
-        aria-hidden="true"
-      />
+        } as any" aria-hidden="true" />
     </span>
 
     <!-- Broken heart when toggling off -->
@@ -105,9 +97,11 @@ const handleClick = () => {
     transform: translate(-50%, -50%) translate(0, 0) scale(0.5) rotate(0deg);
     opacity: 0;
   }
+
   20% {
     opacity: 1;
   }
+
   100% {
     transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(var(--scale)) rotate(var(--rot));
     opacity: 0;
@@ -137,9 +131,11 @@ const handleClick = () => {
     transform: translate(-50%, -50%) rotate(0deg);
     opacity: 1;
   }
+
   40% {
     transform: translate(calc(-50% - 3px), calc(-50% + 1px)) rotate(-10deg);
   }
+
   100% {
     transform: translate(calc(-50% - 14px), calc(-50% + 6px)) rotate(-25deg);
     opacity: 0;
@@ -151,9 +147,11 @@ const handleClick = () => {
     transform: translate(-50%, -50%) rotate(0deg);
     opacity: 1;
   }
+
   40% {
     transform: translate(calc(-50% + 3px), calc(-50% + 1px)) rotate(10deg);
   }
+
   100% {
     transform: translate(calc(-50% + 14px), calc(-50% + 6px)) rotate(25deg);
     opacity: 0;

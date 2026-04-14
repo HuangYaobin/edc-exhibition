@@ -1,22 +1,17 @@
 <template>
-  <div class="exhibition-layout">
+  <div class="exhibition-layout flex flex-col flex-1 min-h-0 overflow-hidden p-4 gap-2 bg-[#080808] relative">
+    <!-- 顶部操作区（菜单按钮等） -->
+    <div v-if="$slots.actions" class="absolute! z-2! top-4 left-4 z-10 flex items-center gap-2">
+      <slot name="actions" />
+    </div>
     <slot name="map" />
+  <div class="flex-1 min-h-0 overflow-hidden">
     <slot name="detail" />
+  </div>
   </div>
 </template>
 
 <style scoped>
-.exhibition-layout {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-  padding: 16px;
-  gap: 0.5rem;
-  background-color: #080808;
-  position: relative;
-}
-
 /* 斜向 logo 水印：inset: -50% 让伪元素超出容器边界，
    旋转后四角不留空；screen 混合令黑色背景消失 */
 .exhibition-layout::before {
@@ -24,7 +19,7 @@
   position: absolute;
   inset: -50%;
   background-image: url('@/assets/edcshow-logo.svg');
-  background-size: 80px 80px;
+  background-size: 90px 90px;
   background-repeat: repeat;
   mix-blend-mode: screen;
   opacity: 0.13;
