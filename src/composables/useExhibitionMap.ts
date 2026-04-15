@@ -8,7 +8,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg'
 const FOCUS_DURATION = 420
 
 /** 聚焦后展位占 viewport 短边的目标比例 */
-const FOCUS_FILL_RATIO = 0.4
+const FOCUS_FILL_RATIO = 0.3
 
 export interface UseExhibitionMapOptions {
   /** 可交互的展位 id 列表 */
@@ -80,20 +80,20 @@ export function useExhibitionMap(options: UseExhibitionMapOptions) {
 
     let pathIndex = 0
     for (const child of group.children) {
+      const clone = child.cloneNode(true) as SVGElement
+      clone.removeAttribute('id')
       if (child instanceof SVGPathElement) {
-        const clone = child.cloneNode(true) as SVGPathElement
-        clone.removeAttribute('id')
         // 仅第一个 path（展位外形）加高亮色；后续 path（logo 等）保持原色
         if (pathIndex === 0) clone.classList.add('map-highlight-clone')
         pathIndex++
-        layer.appendChild(clone)
       }
       else if (child instanceof SVGTextElement) {
-        const clone = child.cloneNode(true) as SVGTextElement
-        clone.removeAttribute('id')
         clone.classList.add('map-highlight-label-clone')
-        layer.appendChild(clone)
       }
+      else if (child instanceof SVGLineElement) {
+        clone.classList.add('map-highlight-divider-clone')
+      }
+      layer.appendChild(clone)
     }
 
     if (!layer.firstChild) return
@@ -185,8 +185,8 @@ export function useExhibitionMap(options: UseExhibitionMapOptions) {
     // 目标 panzoom scale：让展位占 viewport 短边的 FOCUS_FILL_RATIO
     const boothLongerSidePx = Math.max(bbox.width, bbox.height) * svgScale
     const targetScale = Math.min(
-      4,
-      Math.max(2, (Math.min(vpW, vpH) * FOCUS_FILL_RATIO) / boothLongerSidePx),
+      3,
+      Math.max(1.5, (Math.min(vpW, vpH) * FOCUS_FILL_RATIO) / boothLongerSidePx),
     )
 
     // panzoom pre-scale translate：使展位中心出现在 viewport 中心
