@@ -11,7 +11,8 @@ export function transformBoothToBrand(booth: Booth): Brand | null {
         productName: p.name,
         productImage: p.imageUrl || '/imgs/default/empty.png',
         productDescription: p.description,
-        productPrice: p.price ? String(p.price / 100) : undefined,
+        productPrice: p.price != null ? String(p.price / 100) : undefined,
+        productStock: p.totalQuantity != null ? String(p.totalQuantity) : undefined,
       })) || [],
     }
   }
@@ -22,7 +23,8 @@ export function transformBoothToBrand(booth: Booth): Brand | null {
     productName: p.name,
     productImage: p.imageUrl || '/imgs/default/empty.png',
     productDescription: p.description,
-    productPrice: p.price ? String(p.price / 100) : undefined,
+    productPrice: p.price != null ? String(p.price / 100) : undefined,
+    productStock: p.totalQuantity != null ? String(p.totalQuantity) : undefined,
   }))
 
   const gifts: Gift[] = []
@@ -51,7 +53,8 @@ export function transformBoothToBrands(booth: Booth): Brand[] {
       productName: p.name,
       productImage: p.imageUrl || '/imgs/default/empty.png',
       productDescription: p.description,
-      productPrice: p.price ? String(p.price / 100) : undefined,
+      productPrice: p.price != null ? String(p.price / 100) : undefined,
+      productStock: p.totalQuantity != null ? String(p.totalQuantity) : undefined,
     }))
 
     return {

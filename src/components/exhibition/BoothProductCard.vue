@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import FavoriteButton from '@/components/base/FavoriteButton.vue'
+import ProductDetailDialog from '@/components/exhibition/ProductDetailDialog.vue'
 import type { BoothProduct } from '@/api/types'
 import { useWishlist } from '@/composables/useWishlist'
 
@@ -8,6 +10,8 @@ const props = defineProps<{
   boothNumber: string
   brandName: string
 }>()
+
+const showDetailDialog = ref(false)
 
 function handleImageError(e: Event) {
   const target = e.target as HTMLImageElement
@@ -21,9 +25,9 @@ const { wishlistProductIds, toggleWishlist } = useWishlist()
 
 <template>
   <div
-    class="flex rounded-xl bg-zinc-800 border border-zinc-700 overflow-hidden hover:border-zinc-600 transition-colors duration-200">
-    <!-- Image -->
-    <div class="w-36 shrink-0 bg-zinc-700 relative overflow-hidden">
+    class="flex h-32 rounded-xl bg-zinc-800 border border-zinc-700 overflow-hidden hover:border-zinc-600 transition-colors duration-200 cursor-pointer"
+    @click="showDetailDialog = true">
+    <div class="w-32 shrink-0 bg-zinc-700 relative overflow-hidden">
       <img :src="product.imageUrl" :alt="product.name" class="w-full h-full object-cover absolute inset-0"
         @error="handleImageError" />
       <div class="absolute inset-0 items-center justify-center text-zinc-700 text-3xl" style="display: none;">
@@ -42,18 +46,23 @@ const { wishlistProductIds, toggleWishlist } = useWishlist()
         </p>
       </div>
 
-      <div class="flex items-end justify-between mt-auto gap-2">
-        <div class="flex flex-col gap-1 min-w-0">
-          <span v-if="product.price" class="text-amber-400 font-bold text-base leading-none">
+      <div class="flex items-center justify-between mt-auto gap-2">
+        <div class="flex items-baseline gap-2 min-w-0">
+          <span v-if="product.price != null" class="text-amber-400 font-bold text-base leading-none">
             ¥{{ (product.price / 100).toFixed(2) }}
           </span>
           <span v-else class="text-zinc-600 text-xs leading-none">暂无定价</span>
-          <span class="text-[10px] leading-none"
-            :class="product.quantity == null ? 'text-zinc-500' : product.quantity > 0 ? 'text-zinc-400' : 'text-rose-400'">
-            {{ product.quantity == null ? '不限量' : product.quantity > 0 ? `限量 ${product.quantity} 件` : '已售罄' }}
+          <span class="text-[10px] leading-none px-1.5 py-0.5 rounded"
+            :class="product.totalQuantity == null ? 'text-zinc-500 bg-zinc-700' : product.totalQuantity > 0 ? 'text-zinc-300 bg-zinc-700' : 'text-rose-400 bg-rose-400/10'">
+            {{ product.totalQuantity == null ? '不限量' : product.totalQuantity > 0 ? `限量 ${product.totalQuantity} 件` : '已售罄' }}
           </span>
         </div>
-        <FavoriteButton :active="wishlistProductIds.includes(product.id)" title-on="移出心愿单" title-off="加入心愿单" size-class="text-sm"
+        <FavoriteButton 
+          :active="wishlistProductIds.includes(product.id)" 
+          title-on="移出心愿单" 
+          title-off="加入心愿单" 
+          size-class="text-sm"
+          @click.stop
           @toggle="toggleWishlist({
             productId: product.id,
             productName: product.name,
@@ -66,4 +75,11 @@ const { wishlistProductIds, toggleWishlist } = useWishlist()
       </div>
     </div>
   </div>
+
+  <ProductDetailDialog
+    v-model:visible="showDetailDialog"
+    :product="product"
+    :booth-number="boothNumber"
+    :brand-name="brandName"
+  />
 </template>

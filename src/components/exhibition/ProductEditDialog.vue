@@ -15,7 +15,7 @@ const emit = defineEmits<{
   (e: 'saved'): void
 }>()
 
-const form = ref({ name: '', description: '', imageUrl: '', price: '', quantity: '' })
+const form = ref({ name: '', description: '', imageUrl: '', material: '', price: '', salesRule: '', totalQuantity: '' })
 const saving = ref(false)
 const errorMsg = ref('')
 
@@ -27,8 +27,10 @@ watch(
         name: props.product?.name ?? '',
         description: props.product?.description ?? '',
         imageUrl: props.product?.imageUrl ?? '',
+        material: props.product?.material ?? '',
         price: props.product?.price != null ? String(props.product.price) : '',
-        quantity: props.product?.quantity != null ? String(props.product.quantity) : '',
+        salesRule: props.product?.salesRule ?? '',
+        totalQuantity: props.product?.totalQuantity != null ? String(props.product.totalQuantity) : '',
       }
       errorMsg.value = ''
     }
@@ -48,8 +50,10 @@ async function handleSave() {
       name: form.value.name.trim(),
       description: form.value.description.trim() || undefined,
       imageUrl: form.value.imageUrl.trim() || undefined,
+      material: form.value.material.trim() || undefined,
       price: form.value.price !== '' ? Number(form.value.price) : undefined,
-      quantity: form.value.quantity !== '' ? Number(form.value.quantity) : undefined,
+      salesRule: form.value.salesRule.trim() || undefined,
+      totalQuantity: form.value.totalQuantity !== '' ? Number(form.value.totalQuantity) : undefined,
     }
     if (props.product?.id) {
       await updateProduct(props.product.id, payload)
@@ -108,6 +112,16 @@ async function handleSave() {
       </div>
 
       <div class="flex flex-col gap-1">
+        <label class="text-[11px] text-zinc-500">材质</label>
+        <input
+          v-model="form.material"
+          type="text"
+          placeholder="请输入材质信息"
+          class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none focus:border-zinc-500 transition-colors"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
         <label class="text-[11px] text-zinc-500">价格（元）</label>
         <input
           v-model="form.price"
@@ -120,9 +134,19 @@ async function handleSave() {
       </div>
 
       <div class="flex flex-col gap-1">
-        <label class="text-[11px] text-zinc-500">限量数量（件）</label>
+        <label class="text-[11px] text-zinc-500">发售规则 & 备注</label>
+        <textarea
+          v-model="form.salesRule"
+          placeholder="请输入发售规则和备注信息"
+          rows="2"
+          class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none focus:border-zinc-500 transition-colors resize-none"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-[11px] text-zinc-500">限量总数（件）</label>
         <input
-          v-model="form.quantity"
+          v-model="form.totalQuantity"
           type="number"
           min="0"
           step="1"

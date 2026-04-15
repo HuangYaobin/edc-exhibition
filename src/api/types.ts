@@ -6,6 +6,9 @@ export interface BoothBrand {
   description?: string
   logoUrl?: string
   wechatQrUrl?: string
+  contact?: string
+  contactImageUrl?: string
+  contactType?: string
   sort: number
 }
 
@@ -14,11 +17,15 @@ export interface BoothProduct {
   boothId: string
   name: string
   description?: string
-  imageUrl?: string
-  price?: number
-  quantity?: number
+  imageUrl?: string | null
+  material?: string
+  price?: number | null
+  salesRule?: string
+  totalQuantity?: number
   wishlistCount?: number
   sort: number
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface Booth {
@@ -68,14 +75,19 @@ export interface UpdateBrandPayload {
   description?: string
   logoUrl?: string
   wechatQrUrl?: string
+  contact?: string
+  contactImageUrl?: string
+  contactType?: string
 }
 
 export interface UpsertProductPayload {
   name: string
   description?: string
   imageUrl?: string
+  material?: string
   price?: number
-  quantity?: number
+  salesRule?: string
+  totalQuantity?: number
 }
 
 export interface Exhibition {
