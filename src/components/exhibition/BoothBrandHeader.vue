@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import BaseDialog from '@/components/base/BaseDialog.vue'
 import type { BoothBrand } from '@/api/types'
 import { useCheckins } from '@/composables/useCheckins'
@@ -8,7 +8,6 @@ const props = defineProps<{
   brand: BoothBrand
   boothId: string
   boothNumber: string
-  wechatQrSrc?: string
   isDev?: boolean
 }>()
 
@@ -19,7 +18,7 @@ const emit = defineEmits<{
 const descriptionEl = ref<HTMLParagraphElement | null>(null)
 const isClamped = ref(false)
 const showDescDialog = ref(false)
-const showWechatQr = ref(false)
+const showContactDialog = ref(false)
 
 function checkClamped() {
   nextTick(() => {
@@ -30,7 +29,7 @@ function checkClamped() {
 
 watch(() => props.brand, () => {
   showDescDialog.value = false
-  showWechatQr.value = false
+  showContactDialog.value = false
   checkClamped()
 })
 
@@ -44,6 +43,28 @@ function handleImageError(e: Event) {
 }
 
 const { isCheckedIn, toggleCheckin } = useCheckins()
+
+const hasContact = computed(() => {
+  const { contactType, contact, contactImageUrl, wechatQrUrl } = props.brand
+  
+  const hasText = contact && contact.trim()
+  const hasImage = contactImageUrl && contactImageUrl.trim()
+  const hasWechat = wechatQrUrl && wechatQrUrl.trim()
+  
+  if (contactType === 'text' && hasText) return true
+  if (contactType === 'image' && hasImage) return true
+  
+  return !!(hasText || hasImage || hasWechat)
+})
+
+const getContactLabel = computed(() => {
+  const { contactType, wechatQrUrl, contactImageUrl } = props.brand
+  
+  if (contactType === 'text') return '联系方式'
+  if (contactType === 'image' && contactImageUrl) return '微信联系'
+  if (wechatQrUrl) return '微信联系'
+  return '联系方式'
+})
 </script>
 
 <template>
@@ -115,11 +136,11 @@ const { isCheckedIn, toggleCheckin } = useCheckins()
           {{ isCheckedIn(boothId) ? '已打卡' : '来打卡' }}
         </button>
 
-        <button v-if="wechatQrSrc"
+        <button v-if="hasContact"
           class="inline-flex items-center gap-1 text-[11px] px-2.5 py-2 lh-none rounded-full border bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
-          @click.stop="showWechatQr = true">
-          <i class="i-carbon-qr-code text-[11px]" />
-          微信联系
+          @click.stop="showContactDialog = true">
+          <i class="i-carbon-logo-wechat text-[11px]" />
+          {{ getContactLabel }}
         </button>
 
         <button
@@ -130,14 +151,26 @@ const { isCheckedIn, toggleCheckin } = useCheckins()
         </button>
       </div>
 
-      <BaseDialog v-model:visible="showWechatQr" :title="`${brand.name} · 微信联系方式`">
+      <BaseDialog v-model:visible="showContactDialog" title="联系方式">
         <div class="flex flex-col items-center gap-3 py-2">
-          <img :src="wechatQrSrc" :alt="`${brand.name} 微信二维码`"
-            class="w-48 h-48 object-contain rounded-lg bg-white p-1" />
-          <p class="text-zinc-500 text-xs m-0">扫描二维码添加微信</p>
-          <p v-if="isDev && !brand.wechatQrUrl" class="text-zinc-600 text-[10px] m-0">
-            （开发占位图，接口返回 wechatQrUrl 后替换）
-          </p>
+          <template v-if="brand.contactType === 'text' && brand.contact">
+            <div class="w-full p-3 bg-zinc-800 rounded-lg">
+              <p class="text-zinc-300 text-sm leading-relaxed m-0 whitespace-pre-wrap">{{ brand.contact }}</p>
+            </div>
+          </template>
+          <template v-else-if="brand.contactType === 'image' && brand.contactImageUrl">
+            <img :src="brand.contactImageUrl" :alt="`${brand.name} 联系方式`"
+              class="w-48 h-48 object-contain rounded-lg bg-white p-1" />
+            <p class="text-zinc-500 text-xs m-0">扫描二维码联系</p>
+          </template>
+          <template v-else-if="brand.wechatQrUrl">
+            <img :src="brand.wechatQrUrl" :alt="`${brand.name} 微信二维码`"
+              class="w-48 h-48 object-contain rounded-lg bg-white p-1" />
+            <p class="text-zinc-500 text-xs m-0">扫描二维码添加微信</p>
+          </template>
+          <template v-else>
+            <p class="text-zinc-600 text-sm m-0">暂无联系方式</p>
+          </template>
         </div>
       </BaseDialog>
     </div>

@@ -38,16 +38,6 @@ const brands = computed(() => props.booth?.brands ?? [])
 const activeBrand = computed(() => brands.value[activeIndex.value] ?? null)
 const hasMultipleBrands = computed(() => brands.value.length > 1)
 
-const DEV_PLACEHOLDER_WECHAT_QR = '/imgs/cj.png'
-const isDev = import.meta.env.DEV
-
-const wechatQrSrc = computed(() => {
-  const fromApi = activeBrand.value?.wechatQrUrl
-  if (fromApi) return fromApi
-  if (isDev) return DEV_PLACEHOLDER_WECHAT_QR
-  return undefined
-})
-
 const showEditDialog = ref(false)
 
 function onEditSaved() {
@@ -70,7 +60,7 @@ function onEditSaved() {
 
       <div class="bg-zinc-900 rounded-lg overflow-hidden">
         <BoothBrandHeader v-if="activeBrand" :brand="activeBrand" :booth-id="booth.id" :booth-number="booth.boothNumber"
-          :wechat-qr-src="wechatQrSrc" :is-dev="isDev" @edit="showEditDialog = true" />
+          @edit="showEditDialog = true" />
 
         <div v-if="booth.products?.length" class="flex flex-col gap-3 p-3 pt-1">
           <BoothProductCard v-for="(product, index) in booth.products" :key="product.id || index" :product="product"

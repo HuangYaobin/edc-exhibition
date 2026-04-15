@@ -25,7 +25,9 @@ const form = ref({
   nameEn: '',
   description: '',
   logoUrl: '',
-  wechatQrUrl: '',
+  contact: '',
+  contactImageUrl: '',
+  contactType: 'text' as 'text' | 'image',
 })
 
 const saving = ref(false)
@@ -44,7 +46,9 @@ watch(
         nameEn: props.brand.nameEn ?? '',
         description: props.brand.description ?? '',
         logoUrl: props.brand.logoUrl ?? '',
-        wechatQrUrl: props.brand.wechatQrUrl ?? '',
+        contact: props.brand.contact ?? '',
+        contactImageUrl: props.brand.contactImageUrl ?? '',
+        contactType: props.brand.contactType ?? 'text',
       }
       activeTab.value = 'brand'
       errorMsg.value = ''
@@ -66,7 +70,9 @@ async function handleSaveBrand() {
       nameEn: form.value.nameEn.trim() || undefined,
       description: form.value.description.trim() || undefined,
       logoUrl: form.value.logoUrl.trim() || undefined,
-      wechatQrUrl: form.value.wechatQrUrl.trim() || undefined,
+      contact: form.value.contactType === 'text' ? (form.value.contact.trim() || undefined) : undefined,
+      contactImageUrl: form.value.contactType === 'image' ? (form.value.contactImageUrl.trim() || undefined) : undefined,
+      contactType: form.value.contactType,
     })
     emit('saved')
     emit('update:visible', false)
@@ -179,9 +185,39 @@ function onProductSaved() {
       </div>
 
       <div class="flex flex-col gap-1">
-        <label class="text-[11px] text-zinc-500">微信二维码 URL</label>
+        <label class="text-[11px] text-zinc-500">联系方式类型</label>
+        <div class="flex gap-2">
+          <button
+            class="flex-1 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer border"
+            :class="form.contactType === 'text' ? 'bg-zinc-700 border-zinc-600 text-zinc-100' : 'bg-transparent border-zinc-700 text-zinc-500 hover:text-zinc-300'"
+            @click="form.contactType = 'text'"
+          >
+            文本
+          </button>
+          <button
+            class="flex-1 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer border"
+            :class="form.contactType === 'image' ? 'bg-zinc-700 border-zinc-600 text-zinc-100' : 'bg-transparent border-zinc-700 text-zinc-500 hover:text-zinc-300'"
+            @click="form.contactType = 'image'"
+          >
+            图片
+          </button>
+        </div>
+      </div>
+
+      <div v-if="form.contactType === 'text'" class="flex flex-col gap-1">
+        <label class="text-[11px] text-zinc-500">联系方式文本</label>
+        <textarea
+          v-model="form.contact"
+          placeholder="请输入联系方式（如微信号、电话等）"
+          rows="2"
+          class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none focus:border-zinc-500 transition-colors resize-none"
+        />
+      </div>
+
+      <div v-else class="flex flex-col gap-1">
+        <label class="text-[11px] text-zinc-500">联系方式图片 URL</label>
         <input
-          v-model="form.wechatQrUrl"
+          v-model="form.contactImageUrl"
           type="text"
           placeholder="https://..."
           class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 outline-none focus:border-zinc-500 transition-colors"
