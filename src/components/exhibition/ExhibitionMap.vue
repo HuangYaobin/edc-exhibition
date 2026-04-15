@@ -3,7 +3,7 @@
 import EshowMap from '@/assets/eshow-map.svg?skipsvgo'
 import { useExhibitionMap } from '@/composables/useExhibitionMap'
 
-const BOOTH_IDS = ['B01', 'B02', 'B03', 'B05', 'B06', 'B07', 'B08', 'B09', 'B10', 'C59', 'A01', 'A02'] as const
+const BOOTH_IDS = ['B01', 'B09-B10', 'B22', 'B03', 'B05', 'B06', 'B07', 'B08', 'B09', 'B10', 'C01', 'C59', 'A01', 'A02'] as const
 
 const props = defineProps<{
   selectedBoothId: string | null
@@ -61,5 +61,9 @@ defineExpose({ focusBooth, resetView })
 
 .eshow-map :deep(.map-highlight-label-clone) {
   fill: #422006 !important;
+}
+
+.eshow-map :deep(.map-highlight-divider-clone) {
+  stroke: #422006 !important;
 }
 </style>

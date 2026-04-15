@@ -6,7 +6,7 @@ const emit = defineEmits<{
   reset: []
 }>()
 
-const DEBUG_BOOTHS = ['B01', 'B05', 'B60', 'C59', 'A01'] as const
+const DEBUG_BOOTHS = ['B09-B10', 'B05', 'B60', 'C59', 'A01'] as const
 
 const visible = ref(false)
 
