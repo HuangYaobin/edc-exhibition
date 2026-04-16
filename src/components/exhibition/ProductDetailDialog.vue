@@ -29,16 +29,16 @@ function handleImageError(e: Event) {
     @update:visible="emit('update:visible', $event)"
   >
     <div v-if="product" class="flex flex-col gap-4">
-      <div class="w-full aspect-video bg-zinc-800 rounded-lg overflow-hidden relative">
+      <div class="w-full bg-zinc-800 rounded-lg overflow-hidden relative">
         <img
           v-if="product.imageUrl"
           :src="product.imageUrl"
           :alt="product.name"
-          class="w-full h-full object-cover absolute inset-0"
+          class="w-full h-auto max-h-96 object-contain"
           @error="handleImageError"
         />
         <div
-          class="absolute inset-0 items-center justify-center text-zinc-700 text-4xl"
+          class="w-full h-48 items-center justify-center text-zinc-700 text-4xl"
           :style="{ display: product.imageUrl ? 'none' : 'flex' }"
         >
           <i class="i-carbon-image" />
@@ -88,22 +88,22 @@ function handleImageError(e: Event) {
           </p>
         </div>
 
-        <div v-if="product.wishlistCount != null" class="flex flex-col gap-1">
+        <!-- <div v-if="product.wishlistCount != null" class="flex flex-col gap-1">
           <label class="text-[11px] text-zinc-500 uppercase tracking-wider">收藏数</label>
           <p class="text-zinc-300 text-sm m-0 leading-relaxed">
             {{ product.wishlistCount }} 人收藏
           </p>
-        </div>
+        </div> -->
       </div>
 
-      <div class="pt-2">
+      <!-- <div class="pt-2">
         <button
           class="w-full py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer border-none bg-zinc-100 text-zinc-900 hover:bg-white"
           @click="emit('update:visible', false)"
         >
           关闭
         </button>
-      </div>
+      </div> -->
     </div>
   </BaseDialog>
 </template>

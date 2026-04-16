@@ -26,8 +26,8 @@ const loadingBooth = ref(false)
 const tabItems: TabBarItem[] = [
   { key: 'brands', label: '品牌列表', icon: 'i-carbon-catalog' },
   { key: 'booth', label: '展位详情', icon: 'i-carbon-location' },
-  { key: 'wishlist', label: '心愿单', icon: 'i-carbon-favorite' },
-  { key: 'leaderboard', label: '排行榜', icon: 'i-carbon-trophy' },
+  // { key: 'wishlist', label: '心愿单', icon: 'i-carbon-favorite' },
+  // { key: 'leaderboard', label: '排行榜', icon: 'i-carbon-trophy' },
   // { key: 'chat', label: '聊天室', icon: 'i-carbon-chat' },
 ]
 
@@ -97,17 +97,26 @@ function onHighlightBooth(boothNumber: string, brandName?: string) {
     </template>
 
     <template #detail>
-      <Transition name="tab-fade" mode="out-in">
-        <BrandListPanel v-if="activeTab === 'brands'" key="brands" @select-brand="onSelectBrand" />
-        <BoothDetail v-else-if="activeTab === 'booth'" key="booth"
-          :booth="selectedBoothData && !loadingBooth ? selectedBoothData : null"
-          :selected-brand-id="selectedBrandId"
-          :selected-brand-name="selectedBrandName"
-          @updated="selectedBoothId && fetchBoothData(selectedBoothId)" />
-        <WishlistPanel v-else-if="activeTab === 'wishlist'" key="wishlist" @highlight-booth="onHighlightBooth" />
-        <LeaderboardPanel v-else-if="activeTab === 'leaderboard'" key="leaderboard" @select-booth="onLeaderboardSelect" />
-        <ChatroomPanel v-else-if="activeTab === 'chat'" key="chat" />
-      </Transition>
+      <div class="h-full flex flex-col">
+        <div class="relative flex items-center gap-2.5 px-2 py-1 bg-gradient-to-r from-amber-500/8 to-transparent shrink-0">
+          <div class="absolute left-0 top-0 bottom-0 w-1 bg-amber-400/60 rounded-r-full" />
+          <i class="i-carbon-information text-amber-400/90 text-base shrink-0 relative -top-px" />
+          <span class="text-[13px] text-amber-200/80 font-medium tracking-wide">内容为参考信息，具体以官方为准</span>
+        </div>
+        <div class="flex-1 min-h-0">
+          <Transition name="tab-fade" mode="out-in">
+            <BrandListPanel v-if="activeTab === 'brands'" key="brands" @select-brand="onSelectBrand" />
+            <BoothDetail v-else-if="activeTab === 'booth'" key="booth"
+              :booth="selectedBoothData && !loadingBooth ? selectedBoothData : null"
+              :selected-brand-id="selectedBrandId"
+              :selected-brand-name="selectedBrandName"
+              @updated="selectedBoothId && fetchBoothData(selectedBoothId)" />
+            <!-- <WishlistPanel v-else-if="activeTab === 'wishlist'" key="wishlist" @highlight-booth="onHighlightBooth" />
+            <LeaderboardPanel v-else-if="activeTab === 'leaderboard'" key="leaderboard" @select-booth="onLeaderboardSelect" /> -->
+            <ChatroomPanel v-else-if="activeTab === 'chat'" key="chat" />
+          </Transition>
+        </div>
+      </div>
     </template>
   </ExhibitionLayout>
 

@@ -125,7 +125,7 @@ const getContactLabel = computed(() => {
 
       <!-- Action buttons -->
       <div class="flex items-center gap-2 mt-2">
-        <button
+        <!-- <button
           class="inline-flex items-center gap-1 text-[11px] px-2.5 py-2 lh-none rounded-full border transition-colors cursor-pointer"
           :class="isCheckedIn(boothId)
             ? 'bg-amber-950/50 border-amber-700/60 text-amber-400'
@@ -134,7 +134,7 @@ const getContactLabel = computed(() => {
           <i class="text-[11px]"
             :class="isCheckedIn(boothId) ? 'i-carbon-checkmark-filled text-amber-400' : 'i-carbon-stamp text-zinc-500'" />
           {{ isCheckedIn(boothId) ? '已打卡' : '来打卡' }}
-        </button>
+        </button> -->
 
         <button v-if="hasContact"
           class="inline-flex items-center gap-1 text-[11px] px-2.5 py-2 lh-none rounded-full border bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
@@ -143,12 +143,12 @@ const getContactLabel = computed(() => {
           {{ getContactLabel }}
         </button>
 
-        <button
+        <!-- <button
           class="inline-flex items-center gap-1 text-[11px] px-2.5 py-2 lh-none rounded-full border bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer ml-auto"
           @click.stop="emit('edit')">
           <i class="i-carbon-edit text-[11px]" />
           编辑
-        </button>
+        </button> -->
       </div>
 
       <BaseDialog v-model:visible="showContactDialog" title="联系方式">

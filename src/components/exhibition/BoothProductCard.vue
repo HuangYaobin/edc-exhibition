@@ -20,17 +20,17 @@ function handleImageError(e: Event) {
   if (placeholder) placeholder.style.display = 'flex'
 }
 
-const { wishlistProductIds, toggleWishlist } = useWishlist()
+// const { wishlistProductIds, toggleWishlist } = useWishlist()
 </script>
 
 <template>
   <div
-    class="flex h-32 rounded-xl bg-zinc-800 border border-zinc-700 overflow-hidden hover:border-zinc-600 transition-colors duration-200 cursor-pointer"
+    class="flex rounded-xl bg-zinc-800 border border-zinc-700 overflow-hidden hover:border-zinc-600 transition-colors duration-200 cursor-pointer"
     @click="showDetailDialog = true">
-    <div class="w-32 shrink-0 bg-zinc-700 relative overflow-hidden">
-      <img :src="product.imageUrl" :alt="product.name" class="w-full h-full object-cover absolute inset-0"
+    <div class="w-32 shrink-0 bg-zinc-700 relative overflow-hidden h-auto aspect-square">
+      <img v-if="product.imageUrl" :src="product.imageUrl" :alt="product.name" class="w-full h-full object-cover absolute inset-0"
         @error="handleImageError" />
-      <div class="absolute inset-0 items-center justify-center text-zinc-700 text-3xl" style="display: none;">
+      <div class="absolute inset-0 items-center justify-center text-zinc-700 text-3xl" :style="{ display: product.imageUrl ? 'none' : 'flex' }">
         <i class="i-carbon-image" />
       </div>
     </div>
@@ -46,32 +46,27 @@ const { wishlistProductIds, toggleWishlist } = useWishlist()
         </p>
       </div>
 
-      <div class="flex items-center justify-between mt-auto gap-2">
-        <div class="flex items-baseline gap-2 min-w-0">
-          <span v-if="product.price != null" class="text-amber-400 font-bold text-base leading-none">
-            ¥{{ (product.price / 100).toFixed(2) }}
-          </span>
-          <span v-else class="text-zinc-600 text-xs leading-none">暂无定价</span>
-          <span class="text-[10px] leading-none px-1.5 py-0.5 rounded"
-            :class="product.totalQuantity == null ? 'text-zinc-500 bg-zinc-700' : product.totalQuantity > 0 ? 'text-zinc-300 bg-zinc-700' : 'text-rose-400 bg-rose-400/10'">
-            {{ product.totalQuantity == null ? '不限量' : product.totalQuantity > 0 ? `限量 ${product.totalQuantity} 件` : '已售罄' }}
+      <div class="mt-auto">
+        <div class="flex items-end gap-3">
+          <div v-if="product.price != null" class="flex items-baseline gap-0.5">
+            <span class="text-amber-400/70 text-xs font-medium mb-0.5">¥</span>
+            <span class="text-amber-300 font-bold text-xl leading-none tracking-tight">
+              {{ (product.price / 100).toFixed(2) }}
+            </span>
+          </div>
+          <span v-else class="text-zinc-600 text-sm font-medium">暂无定价</span>
+          
+          <span class="text-[10px] font-medium leading-none px-2 py-1 rounded border mb-0.5"
+            :class="[
+              product.totalQuantity == null 
+                ? 'text-zinc-500 border-zinc-600' 
+                : product.totalQuantity > 0 
+                  ? 'text-zinc-300 border-zinc-500' 
+                  : 'text-rose-400 border-rose-500'
+            ]">
+            {{ product.totalQuantity == null ? '不限量' : product.totalQuantity > 0 ? `限量 ${product.totalQuantity}` : '已售罄' }}
           </span>
         </div>
-        <FavoriteButton 
-          :active="wishlistProductIds.includes(product.id)" 
-          title-on="移出心愿单" 
-          title-off="加入心愿单" 
-          size-class="text-sm"
-          @click.stop
-          @toggle="toggleWishlist({
-            productId: product.id,
-            productName: product.name,
-            productImage: product.imageUrl,
-            productPrice: product.price,
-            boothId: product.boothId,
-            boothNumber,
-            brandName,
-          })" />
       </div>
     </div>
   </div>
