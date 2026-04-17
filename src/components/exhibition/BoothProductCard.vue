@@ -62,14 +62,17 @@ function handleImageError(e: Event) {
                 ? 'text-zinc-300 border-zinc-500'
                 : 'text-rose-400 border-rose-500'
           ]">
-            {{ product.totalQuantity == null ? '不限量' : product.totalQuantity > 0 ? `限量 ${product.totalQuantity}` : '已售罄'
-            }}
+            {{ product.totalQuantity == null ? '不限量' : product.totalQuantity > 0 ? `限量 ${product.totalQuantity}` : '已售罄' }}
           </span>
         </div>
       </div>
     </div>
   </div>
 
-  <ProductDetailDialog v-model:visible="showDetailDialog" :product="product" :booth-number="boothNumber"
-    :brand-name="brandName" />
+  <ProductDetailDialog
+    v-model:visible="showDetailDialog"
+    :product="product"
+    :booth-number="boothNumber"
+    :brand-name="brandName"
+  />
 </template>

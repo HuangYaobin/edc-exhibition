@@ -15,6 +15,7 @@ export interface BoothBrand {
 export interface BoothProduct {
   id: string
   boothId: string
+  brandId?: string
   name: string
   description?: string
   imageUrl?: string | null

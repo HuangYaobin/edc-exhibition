@@ -38,6 +38,17 @@ const brands = computed(() => props.booth?.brands ?? [])
 const activeBrand = computed(() => brands.value[activeIndex.value] ?? null)
 const hasMultipleBrands = computed(() => brands.value.length > 1)
 
+const filteredProducts = computed(() => {
+  if (!props.booth?.products) return []
+  
+  const allProducts = props.booth.products
+  const hasBrandId = allProducts.some(p => p.brandId)
+  
+  if (!hasBrandId || !activeBrand.value) return allProducts
+  
+  return allProducts.filter(product => product.brandId === activeBrand.value!.id)
+})
+
 const showEditDialog = ref(false)
 
 function onEditSaved() {
@@ -62,8 +73,8 @@ function onEditSaved() {
         <BoothBrandHeader v-if="activeBrand" :brand="activeBrand" :booth-id="booth.id" :booth-number="booth.boothNumber"
           @edit="showEditDialog = true" />
 
-        <div v-if="booth.products?.length" class="flex flex-col gap-3 p-3 pt-1">
-          <BoothProductCard v-for="(product, index) in booth.products" :key="product.id || index" :product="product"
+        <div v-if="filteredProducts.length" class="flex flex-col gap-3 p-3 pt-1">
+          <BoothProductCard v-for="(product, index) in filteredProducts" :key="product.id || index" :product="product"
             :booth-number="booth.boothNumber" :brand-name="activeBrand?.name ?? ''" />
         </div>
 
@@ -74,7 +85,7 @@ function onEditSaved() {
       </div>
 
       <BrandEditDialog v-if="activeBrand" v-model:visible="showEditDialog" :brand="activeBrand" :booth-id="booth.id"
-        :products="booth.products ?? []" @saved="onEditSaved" />
+        :products="filteredProducts" @saved="onEditSaved" />
     </template>
 
     <div v-else class="flex flex-col items-center justify-center gap-3 py-12 px-6 text-center">
