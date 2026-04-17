@@ -41,7 +41,7 @@ function handleImageError(e: Event) {
         <h5 class="text-zinc-100 font-semibold text-sm m-0 leading-snug line-clamp-2">
           {{ product.name }}
         </h5>
-        <p v-if="product.description" class="text-zinc-500 text-xs leading-relaxed m-0 line-clamp-3">
+        <p v-if="product.description" class="text-zinc-500 text-xs leading-relaxed m-0 line-clamp-2">
           {{ product.description }}
         </p>
       </div>
