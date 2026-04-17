@@ -42,24 +42,24 @@ function handleImageError(e: Event) {
   if (placeholder) placeholder.style.display = 'flex'
 }
 
-const { isCheckedIn, toggleCheckin } = useCheckins()
+const { isCheckedIn } = useCheckins()
 
 const hasContact = computed(() => {
   const { contactType, contact, contactImageUrl, wechatQrUrl } = props.brand
-  
+
   const hasText = contact && contact.trim()
   const hasImage = contactImageUrl && contactImageUrl.trim()
   const hasWechat = wechatQrUrl && wechatQrUrl.trim()
-  
+
   if (contactType === 'text' && hasText) return true
   if (contactType === 'image' && hasImage) return true
-  
+
   return !!(hasText || hasImage || hasWechat)
 })
 
 const getContactLabel = computed(() => {
   const { contactType, wechatQrUrl, contactImageUrl } = props.brand
-  
+
   if (contactType === 'text') return '联系方式'
   if (contactType === 'image' && contactImageUrl) return '微信联系'
   if (wechatQrUrl) return '微信联系'

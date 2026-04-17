@@ -24,7 +24,7 @@ defineExpose({ focusBooth, resetView })
 
 <template>
   <div ref="viewportRef" class="h-[33.33vh] w-full touch-none overflow-hidden rounded-xl">
-    <div ref="panzoomTargetRef" class="h-full w-full">
+    <div ref="panzoomTargetRef" class="panzoom-target h-full w-full">
       <EshowMap ref="mapRef" class="eshow-map block h-full w-full select-none" role="img" aria-label="展会地图"
         @click="onMapClick" />
     </div>

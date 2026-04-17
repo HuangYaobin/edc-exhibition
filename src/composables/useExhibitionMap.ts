@@ -1,4 +1,3 @@
-import Panzoom from '@panzoom/panzoom'
 import type { ComponentPublicInstance } from 'vue'
 import { onBeforeUnmount, onMounted, nextTick, useTemplateRef, watch } from 'vue'
 
@@ -7,8 +6,14 @@ const SVG_NS = 'http://www.w3.org/2000/svg'
 /** 展位聚焦动画时长（ms） */
 const FOCUS_DURATION = 420
 
-/** 聚焦后展位占 viewport 短边的目标比例 */
+/** 聚焦后展位占 viewBox 短边的目标比例 */
 const FOCUS_FILL_RATIO = 0.3
+
+const MIN_SCALE = 1
+const MAX_SCALE = 4
+
+/** SVG viewBox 状态 */
+interface VB { x: number; y: number; w: number; h: number }
 
 export interface UseExhibitionMapOptions {
   /** 可交互的展位 id 列表 */
@@ -25,10 +30,17 @@ export function useExhibitionMap(options: UseExhibitionMapOptions) {
 
   const mapRef = useTemplateRef<ComponentPublicInstance>('mapRef')
   const viewportRef = useTemplateRef<HTMLElement>('viewportRef')
+  // 保留 ref 名以兼容模板，但不再对它施加 CSS transform
   const panzoomTargetRef = useTemplateRef<HTMLElement>('panzoomTargetRef')
 
-  let panzoom: ReturnType<typeof Panzoom> | null = null
-  let removeWheelListener: (() => void) | null = null
+  // ── ViewBox 状态 ──────────────────────────────────────────────────────────
+
+  /** SVG 的初始 viewBox，是所有缩放/平移的基准 */
+  let origVb: VB | null = null
+  /** 当前 viewBox */
+  let curVb: VB | null = null
+  let rafId: number | null = null
+  let cleanupListeners: (() => void) | null = null
 
   // ── SVG helpers ──────────────────────────────────────────────────────────
 
@@ -39,19 +51,106 @@ export function useExhibitionMap(options: UseExhibitionMapOptions) {
     return el instanceof SVGSVGElement ? el : null
   }
 
+  // ── ViewBox helpers ──────────────────────────────────────────────────────
+
+  function applyVb(svg: SVGSVGElement, vb: VB) {
+    svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`)
+    curVb = { ...vb }
+  }
+
   /**
-   * 计算 SVG 在 panzoom-target 内（scale=1 时）的渲染比例和偏移。
-   * SVG 默认 preserveAspectRatio="xMidYMid meet"，内容等比居中适配容器。
+   * 约束 viewBox，等价于 panzoom 的 contain:'outside'：
+   * 任何时候视口都不能显示 SVG 原始内容区域之外的空白。
    */
-  function getSvgRenderTransform(svg: SVGSVGElement) {
-    const vb = svg.viewBox.baseVal
-    const vpRect = viewportRef.value!.getBoundingClientRect()
-    const vpW = vpRect.width
-    const vpH = vpRect.height
-    const scale = Math.min(vpW / vb.width, vpH / vb.height)
-    const offsetX = (vpW - vb.width * scale) / 2
-    const offsetY = (vpH - vb.height * scale) / 2
-    return { scale, offsetX, offsetY, vpW, vpH }
+  function constrain(vb: VB): VB {
+    if (!origVb) return vb
+    // 缩小超过 minScale 则直接重置
+    if (vb.w >= origVb.w) return { ...origVb }
+    return {
+      x: Math.max(origVb.x, Math.min(origVb.x + origVb.w - vb.w, vb.x)),
+      y: Math.max(origVb.y, Math.min(origVb.y + origVb.h - vb.h, vb.y)),
+      w: vb.w,
+      h: vb.h,
+    }
+  }
+
+  function getScale(): number {
+    if (!origVb || !curVb) return 1
+    return origVb.w / curVb.w
+  }
+
+  /**
+   * 以屏幕坐标 (clientX, clientY) 为焦点缩放到 newScale。
+   *
+   * 使用 getScreenCTM().inverse() 将屏幕坐标转为 SVG viewBox 坐标，
+   * 自动处理 preserveAspectRatio 的 letterbox 偏移，无需手动换算。
+   */
+  function zoomAt(svg: SVGSVGElement, newScale: number, clientX: number, clientY: number) {
+    if (!origVb || !curVb) return
+    newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale))
+
+    const ctm = svg.getScreenCTM()
+    if (!ctm) return
+    const inv = ctm.inverse()
+
+    // 屏幕坐标 → SVG viewBox 坐标
+    const p = new DOMPoint(clientX, clientY).matrixTransform(inv)
+
+    // 新 viewBox 尺寸（始终维持原始宽高比）
+    const newW = origVb.w / newScale
+    const newH = origVb.h / newScale
+
+    // 保持焦点的 viewBox 内相对位置不变，实现"以手指为中心缩放"
+    const fracX = (p.x - curVb.x) / curVb.w
+    const fracY = (p.y - curVb.y) / curVb.h
+    applyVb(svg, constrain({ x: p.x - fracX * newW, y: p.y - fracY * newH, w: newW, h: newH }))
+  }
+
+  /**
+   * 按屏幕像素 delta 平移（仅在缩放状态下有效）。
+   *
+   * 用 CTM.inverse() 把屏幕 delta 映射为 viewBox delta，
+   * 通过差值消除 CTM 的平移分量，只保留缩放分量。
+   */
+  function panBy(svg: SVGSVGElement, dx: number, dy: number) {
+    if (!origVb || !curVb || getScale() <= 1) return
+    const ctm = svg.getScreenCTM()
+    if (!ctm) return
+    const inv = ctm.inverse()
+    const origin = new DOMPoint(0, 0).matrixTransform(inv)
+    const moved = new DOMPoint(dx, dy).matrixTransform(inv)
+    applyVb(svg, constrain({
+      x: curVb.x - (moved.x - origin.x),
+      y: curVb.y - (moved.y - origin.y),
+      w: curVb.w,
+      h: curVb.h,
+    }))
+  }
+
+  // ── 缓动动画（rAF，替代 CSS transition）────────────────────────────────
+
+  function easeInOut(t: number): number {
+    // 近似 cubic-bezier(0.4, 0, 0.2, 1)
+    return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
+  }
+
+  function animateTo(svg: SVGSVGElement, target: VB) {
+    if (rafId !== null) cancelAnimationFrame(rafId)
+    const from = { ...curVb! }
+    const t0 = performance.now()
+
+    function tick(now: number) {
+      const t = Math.min(1, (now - t0) / FOCUS_DURATION)
+      const e = easeInOut(t)
+      applyVb(svg, {
+        x: from.x + (target.x - from.x) * e,
+        y: from.y + (target.y - from.y) * e,
+        w: from.w + (target.w - from.w) * e,
+        h: from.h + (target.h - from.h) * e,
+      })
+      rafId = t < 1 ? requestAnimationFrame(tick) : null
+    }
+    rafId = requestAnimationFrame(tick)
   }
 
   // ── 高亮 overlay ─────────────────────────────────────────────────────────
@@ -73,8 +172,6 @@ export function useExhibitionMap(options: UseExhibitionMapOptions) {
     const layer = document.createElementNS(SVG_NS, 'g')
     layer.classList.add('map-highlight-layer')
     layer.setAttribute('pointer-events', 'none')
-    // Preserve the group's own transform (e.g. translate added by Inkscape) so
-    // the cloned children render at the correct visual position.
     const groupTransform = group.getAttribute('transform')
     if (groupTransform) layer.setAttribute('transform', groupTransform)
 
@@ -83,7 +180,6 @@ export function useExhibitionMap(options: UseExhibitionMapOptions) {
       const clone = child.cloneNode(true) as SVGElement
       clone.removeAttribute('id')
       if (child instanceof SVGPathElement) {
-        // 仅第一个 path（展位外形）加高亮色；后续 path（logo 等）保持原色
         if (pathIndex === 0) clone.classList.add('map-highlight-clone')
         pathIndex++
       }
@@ -100,59 +196,139 @@ export function useExhibitionMap(options: UseExhibitionMapOptions) {
     svg.appendChild(layer)
   }
 
-  // ── Panzoom ───────────────────────────────────────────────────────────────
-
-  function initPanzoom() {
-    const target = panzoomTargetRef.value
-    const viewport = viewportRef.value
-    if (!target || !viewport) return
-
-    panzoom = Panzoom(target, {
-      maxScale: 4,
-      minScale: 1,
-      step: 0.12,
-      contain: 'outside',
-      panOnlyWhenZoomed: true,
-      cursor: 'grab',
-    })
-
-    const onWheel = (e: WheelEvent) => panzoom?.zoomWithWheel(e)
-    viewport.addEventListener('wheel', onWheel, { passive: false })
-    removeWheelListener = () => viewport.removeEventListener('wheel', onWheel)
-  }
+  // ── 手势处理 ─────────────────────────────────────────────────────────────
 
   /**
-   * 平滑移动并缩放到指定展位。
+   * 用 PointerEvent 统一处理鼠标/触摸/触控笔，替代 panzoom 的事件绑定。
+   *
+   * - 单指/鼠标：平移（仅在 scale>1 时有效）
+   * - 双指：pinch 缩放，焦点固定在初始中点，避免内容漂移
+   * - 滚轮：缩放
+   *
+   * 使用 SVG viewBox 操控而非 CSS transform，浏览器始终按屏幕分辨率渲染
+   * SVG 矢量内容，彻底避免 CSS transform 导致的光栅化模糊。
+   */
+  function initGestures() {
+    const viewport = viewportRef.value
+    if (!viewport) return
+
+    viewport.style.touchAction = 'none'
+
+    const ptrs = new Map<number, PointerEvent>()
+    let panLastX = 0
+    let panLastY = 0
+    let pinchActive = false
+    let pinchStartDist = 0
+    let pinchStartScale = 1
+    let pinchOriginX = 0
+    let pinchOriginY = 0
+
+    const onPtrDown = (e: PointerEvent) => {
+      // 手势开始时取消正在进行的动画
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId)
+        rafId = null
+      }
+      ptrs.set(e.pointerId, e)
+      viewport.setPointerCapture(e.pointerId)
+
+      if (ptrs.size === 1) {
+        panLastX = e.clientX
+        panLastY = e.clientY
+        pinchActive = false
+      }
+      else if (ptrs.size === 2) {
+        const [a, b] = [...ptrs.values()]
+        pinchActive = true
+        pinchStartDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
+        pinchStartScale = getScale()
+        // 固定初始中点为缩放焦点，手指移动过程中焦点不漂移
+        pinchOriginX = (a.clientX + b.clientX) / 2
+        pinchOriginY = (a.clientY + b.clientY) / 2
+      }
+    }
+
+    const onPtrMove = (e: PointerEvent) => {
+      if (!ptrs.has(e.pointerId)) return
+      ptrs.set(e.pointerId, e)
+
+      const svg = getSvgRoot()
+      if (!svg) return
+
+      if (pinchActive && ptrs.size >= 2) {
+        const [a, b] = [...ptrs.values()]
+        const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
+        zoomAt(svg, pinchStartScale * dist / pinchStartDist, pinchOriginX, pinchOriginY)
+      }
+      else if (!pinchActive && ptrs.size === 1) {
+        panBy(svg, e.clientX - panLastX, e.clientY - panLastY)
+        panLastX = e.clientX
+        panLastY = e.clientY
+      }
+    }
+
+    const onPtrUp = (e: PointerEvent) => {
+      ptrs.delete(e.pointerId)
+      if (ptrs.size < 2) pinchActive = false
+      if (ptrs.size === 1) {
+        const [rem] = ptrs.values()
+        panLastX = rem.clientX
+        panLastY = rem.clientY
+      }
+    }
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const svg = getSvgRoot()
+      if (!svg) return
+      // 将不同 deltaMode 统一换算为「像素」单位
+      // LINE 模式（鼠标滚轮）: 1 格 ≈ 12px；PAGE 模式: 1页 ≈ 400px
+      let delta = e.deltaY
+      if (e.deltaMode === WheelEvent.DOM_DELTA_LINE) delta *= 12
+      else if (e.deltaMode === WheelEvent.DOM_DELTA_PAGE) delta *= 400
+      // 每 100px 缩放约 10%；触控板小 delta → 丝滑微调，鼠标大 delta → 适度跳跃
+      const factor = Math.pow(0.999, delta)
+      zoomAt(svg, getScale() * factor, e.clientX, e.clientY)
+    }
+
+    viewport.addEventListener('pointerdown', onPtrDown)
+    viewport.addEventListener('pointermove', onPtrMove)
+    viewport.addEventListener('pointerup', onPtrUp)
+    viewport.addEventListener('pointercancel', onPtrUp)
+    viewport.addEventListener('wheel', onWheel, { passive: false })
+
+    cleanupListeners = () => {
+      viewport.removeEventListener('pointerdown', onPtrDown)
+      viewport.removeEventListener('pointermove', onPtrMove)
+      viewport.removeEventListener('pointerup', onPtrUp)
+      viewport.removeEventListener('pointercancel', onPtrUp)
+      viewport.removeEventListener('wheel', onWheel)
+      viewport.style.touchAction = ''
+    }
+  }
+
+  // ── 聚焦展位 ─────────────────────────────────────────────────────────────
+
+  /**
+   * 平滑缩放并移动到指定展位。
    *
    * 原理：
-   * 1. 用 getBBox() 取展位在 SVG viewBox 坐标系中的 bounding box
-   * 2. 将坐标换算为 panzoom-target 坐标系（scale=1 时）的像素位置
-   * 3. 计算出目标 panzoom scale（展位占短边约 40%）
-   * 4. 算出使展位中心对齐 viewport 中心的 translate
-   * 5. 通过 CSS transition 一次性动画缩放+平移（避免分两步抖动）
-   * 6. 动画结束后同步 panzoom 内部状态，保证后续手势正常
-   *
-   * 注意：panzoom 对 HTML 元素强制写入 transform-origin: 50% 50%（inline style，
-   * 会覆盖 Tailwind origin-* 类），并以 scale(s) translate(x, y) 格式设置 transform。
-   * 该格式下屏幕坐标公式为：screen = s*(point + x) + vpW/2*(1-s)
-   * → 要把 (bcx, bcy) 居中：x = vpW/2 - bcx（与 scale 无关）
-   * contain:'outside' 约束：x ∈ [-vpW*(s-1)/(2s), vpW*(s-1)/(2s)]
+   * 1. getBBox() 取展位在 SVG 本地坐标系中的 bounding box
+   * 2. 应用 group 自身的 transform matrix 换算到 viewBox 坐标系
+   * 3. 计算目标 viewBox（展位占短边约 FOCUS_FILL_RATIO）
+   * 4. rAF 动画插值
    */
   function focusBooth(id: string) {
     const svg = getSvgRoot()
-    const viewport = viewportRef.value
-    const target = panzoomTargetRef.value
-    if (!svg || !viewport || !target || !panzoom) return
+    if (!svg || !origVb || !curVb) return
 
     const group = svg.querySelector(`#${CSS.escape(id)}`)
     if (!(group instanceof SVGGElement)) return
 
     const rawBbox = group.getBBox()
-    const { scale: svgScale, offsetX, offsetY, vpW, vpH } = getSvgRenderTransform(svg)
 
-    // getBBox() returns coordinates in the element's local space, ignoring the
-    // element's own transform. Apply the group's transform matrix to obtain the
-    // real bounding box in SVG viewBox space (handles Inkscape translate offsets).
+    // getBBox() 在元素本地空间中，不含 group 自身的 transform。
+    // 用 group 的 transform matrix 将四角映射到 SVG viewBox 坐标系。
     const ownMatrix = group.transform.baseVal.consolidate()?.matrix
     function applyM(x: number, y: number) {
       if (!ownMatrix) return { x, y }
@@ -167,56 +343,32 @@ export function useExhibitionMap(options: UseExhibitionMapOptions) {
       applyM(rawBbox.x, rawBbox.y + rawBbox.height),
       applyM(rawBbox.x + rawBbox.width, rawBbox.y + rawBbox.height),
     ]
-    const svgMinX = Math.min(...corners.map(p => p.x))
-    const svgMinY = Math.min(...corners.map(p => p.y))
-    const svgMaxX = Math.max(...corners.map(p => p.x))
-    const svgMaxY = Math.max(...corners.map(p => p.y))
-    const bbox = {
-      x: svgMinX,
-      y: svgMinY,
-      width: svgMaxX - svgMinX,
-      height: svgMaxY - svgMinY,
-    }
+    const bx = Math.min(...corners.map(p => p.x))
+    const by = Math.min(...corners.map(p => p.y))
+    const bw = Math.max(...corners.map(p => p.x)) - bx
+    const bh = Math.max(...corners.map(p => p.y)) - by
 
-    // 展位中心在 panzoom-target 坐标系（scale=1）中的像素位置
-    const bcx = (bbox.x + bbox.width / 2) * svgScale + offsetX
-    const bcy = (bbox.y + bbox.height / 2) * svgScale + offsetY
+    // 目标 scale：让展位较长边占 viewBox 短边的 FOCUS_FILL_RATIO
+    const boothLonger = Math.max(bw, bh)
+    const origShorter = Math.min(origVb.w, origVb.h)
+    const targetScale = Math.min(MAX_SCALE, Math.max(1.5, (origShorter * FOCUS_FILL_RATIO) / boothLonger))
 
-    // 目标 panzoom scale：让展位占 viewport 短边的 FOCUS_FILL_RATIO
-    const boothLongerSidePx = Math.max(bbox.width, bbox.height) * svgScale
-    const targetScale = Math.min(
-      3,
-      Math.max(1.5, (Math.min(vpW, vpH) * FOCUS_FILL_RATIO) / boothLongerSidePx),
-    )
+    const newW = origVb.w / targetScale
+    const newH = origVb.h / targetScale
 
-    // panzoom pre-scale translate：使展位中心出现在 viewport 中心
-    // screen = s*(bcx + x) + vpW/2*(1-s) = vpW/2  →  x = vpW/2 - bcx
-    const xIdeal = vpW / 2 - bcx
-    const yIdeal = vpH / 2 - bcy
-
-    // contain:'outside' 合法范围（panzoom 源码 constrainXY）：
-    //   x ∈ [-vpW*(s-1)/(2s), vpW*(s-1)/(2s)]
-    const xBound = vpW * (targetScale - 1) / (2 * targetScale)
-    const yBound = vpH * (targetScale - 1) / (2 * targetScale)
-    const x = Math.max(-xBound, Math.min(xBound, xIdeal))
-    const y = Math.max(-yBound, Math.min(yBound, yIdeal))
-
-    // 用 CSS transition 驱动动画，格式与 panzoom 一致
-    const prevTransition = target.style.transition
-    target.style.transition = `transform ${FOCUS_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1)`
-    target.style.transform = `scale(${targetScale}) translate(${x}px, ${y}px)`
-
-    // 动画结束后同步 panzoom 内部状态，保证后续手势正常
-    target.addEventListener('transitionend', () => {
-      target.style.transition = prevTransition
-      panzoom!.zoom(targetScale, { animate: false })
-      panzoom!.pan(x, y, { animate: false })
-    }, { once: true })
+    animateTo(svg, constrain({
+      x: (bx + bw / 2) - newW / 2,
+      y: (by + bh / 2) - newH / 2,
+      w: newW,
+      h: newH,
+    }))
   }
 
   /** 重置视图到初始状态 */
   function resetView() {
-    panzoom?.reset({ animate: true })
+    const svg = getSvgRoot()
+    if (!svg || !origVb) return
+    animateTo(svg, { ...origVb })
   }
 
   // ── 点击 ──────────────────────────────────────────────────────────────────
@@ -228,20 +380,33 @@ export function useExhibitionMap(options: UseExhibitionMapOptions) {
     onBoothClick(selectedBoothId() === id ? null : id)
   }
 
+  // ── 初始化 ────────────────────────────────────────────────────────────────
+
+  function init() {
+    const svg = getSvgRoot()
+    if (!svg) return
+    const vb = svg.viewBox.baseVal
+    origVb = { x: vb.x, y: vb.y, w: vb.width, h: vb.height }
+    curVb = { ...origVb }
+    initGestures()
+  }
+
   // ── 生命周期 ──────────────────────────────────────────────────────────────
 
   onMounted(() => {
     nextTick(() => {
       syncHighlightOverlay()
-      initPanzoom()
+      init()
     })
   })
 
   onBeforeUnmount(() => {
-    removeWheelListener?.()
-    removeWheelListener = null
-    panzoom?.destroy()
-    panzoom = null
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId)
+      rafId = null
+    }
+    cleanupListeners?.()
+    cleanupListeners = null
   })
 
   watch(selectedBoothId, syncHighlightOverlay, { flush: 'post' })

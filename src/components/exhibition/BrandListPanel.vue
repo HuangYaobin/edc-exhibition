@@ -41,13 +41,13 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="flex flex-col overflow-hidden">
+  <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
     <!-- Search bar -->
     <div class="px-1 pb-2 shrink-0">
       <div class="flex items-center gap-2 bg-zinc-800 rounded-xl px-3 py-2  transition-colors">
         <i class="i-carbon-search text-zinc-500 text-sm shrink-0" />
         <input v-model="searchQuery" type="search" placeholder="搜索品牌…"
-          class="flex-1 min-w-0 bg-transparent text-zinc-200 text-sm outline-none placeholder-zinc-600" />
+          class="flex-1 min-w-0 bg-transparent text-zinc-200 text-base outline-none placeholder-zinc-600" />
       </div>
     </div>
 
@@ -66,7 +66,7 @@ onMounted(async () => {
 
     <!-- Brand list -->
     <div v-else
-      class="flex flex-col gap-2 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+      class="flex flex-col gap-2 overflow-y-auto hide-scrollbar">
       <button v-for="brand in filteredBrands" :key="brand.id"
         class="flex items-center gap-3 w-full text-left bg-zinc-900 rounded-xl px-3 py-2.5 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/70 active:bg-zinc-800 transition-colors cursor-pointer"
         @click="emit('select-brand', brand.boothNumber, brand.id)">

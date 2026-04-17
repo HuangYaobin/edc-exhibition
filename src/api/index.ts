@@ -1,5 +1,4 @@
 import type { Booth, Exhibition, LeaderboardData, ProductWishlistResponse, UpdateBrandPayload, UpsertProductPayload, WishlistListResponse } from './types'
-import mockLeaderboard from '@/mockData/leaderboard.json'
 
 const API_BASE = '/api'
 const MOCK_USER_ID = 'user_mock_001'
@@ -23,13 +22,13 @@ export async function getBoothByNumber(boothNumber: string, exhibitionId?: strin
     params.set('exhibitionId', exhibitionId)
   }
   const query = params.toString() ? `?${params.toString()}` : ''
-  
+
   const res = await fetch(`${API_BASE}/exhibition/booths/${encodeURIComponent(boothNumber)}${query}`)
-  
+
   if (!res.ok) {
     throw new Error(`获取展位信息失败: ${res.status}`)
   }
-  
+
   const response = await res.json()
   return response.data || null
 }
@@ -48,7 +47,7 @@ export async function getLeaderboard(): Promise<LeaderboardData> {
     return response.data || response
   }
   catch {
-    return mockLeaderboard as LeaderboardData
+    return {} as LeaderboardData
   }
 }
 export async function getAllBooths(exhibitionId?: string): Promise<Booth[]> {
@@ -131,7 +130,7 @@ export async function getWishlist(
   if (purchased && purchased !== 'all') params.set('purchased', purchased)
   if (sortBy) params.set('sortBy', sortBy)
   if (sortOrder) params.set('sortOrder', sortOrder)
-  
+
   const res = await fetch(`${API_BASE}/exhibition/wishlist?${params.toString()}`, {
     headers: { 'X-User-Id': MOCK_USER_ID },
   })

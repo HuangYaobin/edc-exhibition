@@ -69,7 +69,7 @@ function handleOverlayClick() {
           </div>
 
           <!-- Body -->
-          <div class="px-4 py-4 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+          <div class="px-4 py-4 max-h-[60vh] overflow-y-auto hide-scrollbar">
             <slot />
           </div>
         </div>

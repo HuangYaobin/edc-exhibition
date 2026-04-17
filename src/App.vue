@@ -1,18 +1,20 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
+import { Swiper, SwiperSlide } from 'swiper/vue'
+import type { Swiper as SwiperClass } from 'swiper/types'
+import 'swiper/css'
 import BoothDetail from '@/components/exhibition/BoothDetail.vue'
-import ChatroomPanel from '@/components/exhibition/ChatroomPanel.vue'
 import DebugMapPanel from '@/components/exhibition/DebugMapPanel.vue'
 import ExhibitionLayout from '@/components/exhibition/ExhibitionLayout.vue'
 import ExhibitionMap from '@/components/exhibition/ExhibitionMap.vue'
-import LeaderboardPanel from '@/components/exhibition/LeaderboardPanel.vue'
-import WishlistPanel from '@/components/exhibition/WishlistPanel.vue'
+// import LeaderboardPanel from '@/components/exhibition/LeaderboardPanel.vue'
+// import WishlistPanel from '@/components/exhibition/WishlistPanel.vue'
 import BrandListPanel from '@/components/exhibition/BrandListPanel.vue'
 import BaseTabBar from '@/components/base/BaseTabBar.vue'
 import type { TabBarItem } from '@/components/base/BaseTabBar.vue'
 import { getBoothByNumber } from '@/api'
 import type { Booth } from '@/api/types'
-import { useWishlist } from '@/composables/useWishlist'
+// import { useWishlist } from '@/composables/useWishlist'
 
 const mapRef = ref<InstanceType<typeof ExhibitionMap> | null>(null)
 
@@ -31,11 +33,27 @@ const tabItems: TabBarItem[] = [
   // { key: 'chat', label: '聊天室', icon: 'i-carbon-chat' },
 ]
 
-const { loadWishlist } = useWishlist()
+const swiperTabKeys = ['brands', 'booth'] as const
+type SwiperTabKey = typeof swiperTabKeys[number]
+const swiperRef = ref<SwiperClass | null>(null)
+
+function onSlideChange(swiper: SwiperClass) {
+  const key = swiperTabKeys[swiper.activeIndex]
+  if (key && key !== activeTab.value)
+    activeTab.value = key
+}
+
+watch(activeTab, (key) => {
+  const idx = swiperTabKeys.indexOf(key as SwiperTabKey)
+  if (idx >= 0 && swiperRef.value && swiperRef.value.activeIndex !== idx)
+    swiperRef.value.slideTo(idx)
+})
+
+// const { loadWishlist } = useWishlist()
 
 onMounted(() => {
-  fetchBoothData('B01')
-  loadWishlist()
+  fetchBoothData('A01')
+  // loadWishlist()
 })
 
 async function fetchBoothData(id: string) {
@@ -71,20 +89,20 @@ function onSelectBrand(boothNumber: string, brandId?: string) {
   mapRef.value?.focusBooth(boothNumber)
 }
 
-function onLeaderboardSelect(boothNumber: string, brandName?: string) {
-  selectedBrandId.value = null
-  selectedBrandName.value = brandName ?? null
-  onBoothClick(boothNumber)
-  mapRef.value?.focusBooth(boothNumber)
-}
+// function onLeaderboardSelect(boothNumber: string, brandName?: string) {
+//   selectedBrandId.value = null
+//   selectedBrandName.value = brandName ?? null
+//   onBoothClick(boothNumber)
+//   mapRef.value?.focusBooth(boothNumber)
+// }
 
-function onHighlightBooth(boothNumber: string, brandName?: string) {
-  selectedBrandId.value = null
-  selectedBrandName.value = brandName ?? null
-  selectedBoothId.value = boothNumber
-  fetchBoothData(boothNumber)
-  mapRef.value?.focusBooth(boothNumber)
-}
+// function onHighlightBooth(boothNumber: string, brandName?: string) {
+//   selectedBrandId.value = null
+//   selectedBrandName.value = brandName ?? null
+//   selectedBoothId.value = boothNumber
+//   fetchBoothData(boothNumber)
+//   mapRef.value?.focusBooth(boothNumber)
+// }
 </script>
 
 <template>
@@ -98,23 +116,24 @@ function onHighlightBooth(boothNumber: string, brandName?: string) {
 
     <template #detail>
       <div class="h-full flex flex-col">
-        <div class="relative flex items-center gap-2.5 px-2 py-1 bg-gradient-to-r from-amber-500/8 to-transparent shrink-0">
+        <!-- <div
+          class="relative flex items-center gap-2.5 px-2 py-1 bg-gradient-to-r from-amber-500/8 to-transparent shrink-0">
           <div class="absolute left-0 top-0 bottom-0 w-1 bg-amber-400/60 rounded-r-full" />
           <i class="i-carbon-information text-amber-400/90 text-base shrink-0 relative -top-px" />
           <span class="text-[13px] text-amber-200/80 font-medium tracking-wide">内容为参考信息，具体以官方为准</span>
-        </div>
-        <div class="flex-1 min-h-0">
-          <Transition name="tab-fade" mode="out-in">
-            <BrandListPanel v-if="activeTab === 'brands'" key="brands" @select-brand="onSelectBrand" />
-            <BoothDetail v-else-if="activeTab === 'booth'" key="booth"
-              :booth="selectedBoothData && !loadingBooth ? selectedBoothData : null"
-              :selected-brand-id="selectedBrandId"
-              :selected-brand-name="selectedBrandName"
-              @updated="selectedBoothId && fetchBoothData(selectedBoothId)" />
-            <!-- <WishlistPanel v-else-if="activeTab === 'wishlist'" key="wishlist" @highlight-booth="onHighlightBooth" />
-            <LeaderboardPanel v-else-if="activeTab === 'leaderboard'" key="leaderboard" @select-booth="onLeaderboardSelect" /> -->
-            <ChatroomPanel v-else-if="activeTab === 'chat'" key="chat" />
-          </Transition>
+        </div> -->
+        <div class="flex-1 min-h-0 flex flex-col">
+          <Swiper class="h-full w-full" :slides-per-view="1" :space-between="0" :touch-angle="40" :threshold="8"
+            :resistance-ratio="0" @swiper="swiperRef = $event" @slide-change="onSlideChange">
+            <SwiperSlide class="!flex flex-col min-h-0">
+              <BrandListPanel @select-brand="onSelectBrand" />
+            </SwiperSlide>
+            <SwiperSlide class="!flex flex-col min-h-0">
+              <BoothDetail :booth="selectedBoothData && !loadingBooth ? selectedBoothData : null"
+                :selected-brand-id="selectedBrandId" :selected-brand-name="selectedBrandName"
+                @updated="selectedBoothId && fetchBoothData(selectedBoothId)" />
+            </SwiperSlide>
+          </Swiper>
         </div>
       </div>
     </template>
@@ -124,13 +143,8 @@ function onHighlightBooth(boothNumber: string, brandName?: string) {
 </template>
 
 <style>
-.tab-fade-enter-active,
-.tab-fade-leave-active {
-  transition: opacity 0.15s ease;
-}
-
-.tab-fade-enter-from,
-.tab-fade-leave-to {
-  opacity: 0;
+.swiper,
+.swiper-wrapper {
+  height: 100%;
 }
 </style>

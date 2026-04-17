@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import BaseTabs from '@/components/base/BaseTabs.vue'
 import BoothBrandHeader from '@/components/exhibition/BoothBrandHeader.vue'
 import BoothProductCard from '@/components/exhibition/BoothProductCard.vue'
-import BrandEditDialog from '@/components/exhibition/BrandEditDialog.vue'
+// import BrandEditDialog from '@/components/exhibition/BrandEditDialog.vue'
 import type { Booth } from '@/api/types'
 
 const props = defineProps<{
@@ -46,7 +46,7 @@ function onEditSaved() {
 </script>
 
 <template>
-  <div class="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+  <div class="h-full overflow-y-auto hide-scrollbar">
     <template v-if="booth">
       <BaseTabs v-if="hasMultipleBrands" v-model="activeIndex" :items="brands">
         <template #tab="{ item, isActive }">

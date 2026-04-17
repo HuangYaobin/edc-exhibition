@@ -5,9 +5,9 @@
       <slot name="actions" />
     </div>
     <slot name="map" />
-  <div class="flex-1 min-h-0 overflow-hidden">
-    <slot name="detail" />
-  </div>
+    <div class="flex-1 min-h-0 overflow-hidden">
+      <slot name="detail" />
+    </div>
   </div>
 </template>
 

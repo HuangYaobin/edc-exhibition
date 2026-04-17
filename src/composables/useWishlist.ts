@@ -1,4 +1,4 @@
-import { computed, ref, shallowRef } from 'vue'
+import { computed, ref } from 'vue'
 import { getWishlist, toggleProductWishlist, updateWishlistPurchased } from '@/api'
 import type { WishlistItem as ApiWishlistItem } from '@/api/types'
 
