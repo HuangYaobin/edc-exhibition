@@ -55,14 +55,14 @@ function handleImageError(e: Event) {
           </div>
           <span v-else class="text-zinc-600 text-sm font-medium">暂无定价</span>
 
-          <span class="text-[10px] font-medium leading-none px-2 py-1 rounded border mb-0.5" :class="[
-            product.totalQuantity == null
+          <span v-if="product.totalQuantity != null" class="text-[10px] font-medium leading-none px-2 py-1 rounded border mb-0.5" :class="[
+            product.totalQuantity === 9999
               ? 'text-zinc-500 border-zinc-600'
               : product.totalQuantity > 0
                 ? 'text-zinc-300 border-zinc-500'
                 : 'text-rose-400 border-rose-500'
           ]">
-            {{ product.totalQuantity == null ? '不限量' : product.totalQuantity > 0 ? `限量 ${product.totalQuantity}` : '已售罄' }}
+            {{ product.totalQuantity === 9999 ? '不限量' : product.totalQuantity > 0 ? `限量 ${product.totalQuantity}` : '已售罄' }}
           </span>
         </div>
       </div>
