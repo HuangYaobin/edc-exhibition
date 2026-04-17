@@ -64,10 +64,10 @@ function handleImageError(e: Event) {
           <p class="text-zinc-300 text-sm m-0 leading-relaxed">{{ product.material }}</p>
         </div>
 
-        <div class="flex flex-col gap-1">
+        <div v-if="product.totalQuantity != null" class="flex flex-col gap-1">
           <label class="text-[11px] text-zinc-500 uppercase tracking-wider">限量总数</label>
           <p class="text-zinc-300 text-sm m-0 leading-relaxed">
-            {{ product.totalQuantity == null ? '不限量' : product.totalQuantity > 0 ? `${product.totalQuantity} 件` : '已售罄' }}
+            {{ product.totalQuantity === 9999 ? '不限量' : product.totalQuantity > 0 ? `${product.totalQuantity} 件` : '已售罄' }}
           </p>
         </div>
 
