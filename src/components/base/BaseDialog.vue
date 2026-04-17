@@ -42,25 +42,16 @@ function handleOverlayClick() {
 <template>
   <Teleport to="body">
     <Transition name="dialog-overlay">
-      <div
-        v-if="visible"
-        class="fixed inset-0 bg-black/60 backdrop-blur-sm"
-        :style="{ zIndex: overlayZIndex }"
-        @click="handleOverlayClick"
-      />
+      <div v-if="visible" class="fixed inset-0 bg-black/60 backdrop-blur-sm" :style="{ zIndex: overlayZIndex }"
+        @click="handleOverlayClick" />
     </Transition>
 
     <Transition name="dialog-content">
-      <div
-        v-if="visible"
-        class="fixed inset-0 flex items-center justify-center pointer-events-none px-4"
-        :style="{ zIndex: contentZIndex }"
-      >
+      <div v-if="visible" class="fixed inset-0 flex items-center justify-center pointer-events-none px-4"
+        :style="{ zIndex: contentZIndex }">
         <div
           class="pointer-events-auto w-full rounded-2xl bg-zinc-900 border border-zinc-700/60 shadow-2xl overflow-hidden"
-          :style="{ maxWidth: maxWidth }"
-          @click.stop
-        >
+          :style="{ maxWidth: maxWidth }" @click.stop>
           <!-- Header -->
           <div v-if="title" class="px-4 py-3 border-b border-zinc-800">
             <h3 class="text-zinc-100 font-semibold text-sm m-0 leading-snug truncate">
@@ -83,6 +74,7 @@ function handleOverlayClick() {
 .dialog-overlay-leave-active {
   transition: opacity 0.2s ease;
 }
+
 .dialog-overlay-enter-from,
 .dialog-overlay-leave-to {
   opacity: 0;
@@ -92,6 +84,7 @@ function handleOverlayClick() {
 .dialog-content-leave-active {
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
+
 .dialog-content-enter-from,
 .dialog-content-leave-to {
   opacity: 0;

@@ -1,5 +1,5 @@
 <template>
-  <div class="exhibition-layout flex flex-col flex-1 min-h-0 overflow-hidden p-4 gap-2 bg-[#080808] relative">
+  <div class="exhibition-layout flex flex-col flex-1 min-h-0 overflow-hidden py-4 gap-2 bg-[#080808] relative">
     <!-- 顶部操作区（菜单按钮等） -->
     <div v-if="$slots.actions" class="absolute! z-2! top-4 left-4 z-10 flex items-center gap-2">
       <slot name="actions" />

@@ -1,14 +1,20 @@
-import type { Booth, Exhibition, LeaderboardData, ProductWishlistResponse, UpdateBrandPayload, UpsertProductPayload, WishlistListResponse } from './types'
+import type {
+  Booth,
+  BoothBrand,
+  BoothProduct,
+  CreateProductPayload,
+  Exhibition,
+  ExhibitionTag,
+  LeaderboardData,
+  UpdateBrandPayload,
+  UpdateProductPayload,
+  UploadImageResult,
+  WishlistQuery,
+  WishlistRecord,
+} from './types'
+import { request } from './http'
 
 const API_BASE = '/api'
-const MOCK_USER_ID = 'user_mock_001'
-
-function getAuthHeaders(): Record<string, string> {
-  return {
-    'Content-Type': 'application/json',
-    'X-User-Id': MOCK_USER_ID,
-  }
-}
 
 export async function getOngoingExhibition(): Promise<Exhibition | null> {
   const res = await fetch(`${API_BASE}/exhibition`)
@@ -63,77 +69,84 @@ export async function getAllBooths(exhibitionId?: string): Promise<Booth[]> {
   return Array.isArray(data) ? data : []
 }
 
-export async function updateBrand(brandId: string, payload: UpdateBrandPayload): Promise<void> {
-  const res = await fetch(`${API_BASE}/exhibition/brands/${encodeURIComponent(brandId)}`, {
-    method: 'PATCH',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(payload),
-  })
-  if (!res.ok) throw new Error(`更新品牌信息失败: ${res.status}`)
+export async function getExhibitionTags(exhibitionId?: string): Promise<ExhibitionTag[]> {
+  const params = new URLSearchParams()
+  if (exhibitionId) params.set('exhibitionId', exhibitionId)
+  const qs = params.toString()
+  const path = qs ? `/api/exhibition/tags?${qs}` : '/api/exhibition/tags'
+  return request<ExhibitionTag[]>(path, { method: 'GET', auth: false })
 }
 
-export async function createProduct(boothId: string, payload: UpsertProductPayload): Promise<void> {
-  const res = await fetch(`${API_BASE}/exhibition/booths/${encodeURIComponent(boothId)}/products`, {
+export async function getMyBrands(): Promise<BoothBrand[]> {
+  return request<BoothBrand[]>('/api/merchant/brands', { method: 'GET' })
+}
+
+export async function updateBrand(brandId: string, payload: UpdateBrandPayload): Promise<BoothBrand> {
+  return request<BoothBrand>(`/api/merchant/brands/${encodeURIComponent(brandId)}`, {
+    method: 'PATCH',
+    body: payload,
+  })
+}
+
+export async function createProduct(payload: CreateProductPayload): Promise<BoothProduct> {
+  return request<BoothProduct>('/api/merchant/products', {
     method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(payload),
+    body: payload,
   })
-  if (!res.ok) throw new Error(`创建展品失败: ${res.status}`)
 }
 
-export async function updateProduct(productId: string, payload: UpsertProductPayload): Promise<void> {
-  const res = await fetch(`${API_BASE}/exhibition/products/${encodeURIComponent(productId)}`, {
+export async function updateProduct(productId: string, payload: UpdateProductPayload): Promise<BoothProduct> {
+  return request<BoothProduct>(`/api/merchant/products/${encodeURIComponent(productId)}`, {
     method: 'PATCH',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(payload),
+    body: payload,
   })
-  if (!res.ok) throw new Error(`更新展品失败: ${res.status}`)
 }
 
 export async function deleteProduct(productId: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/exhibition/products/${encodeURIComponent(productId)}`, {
+  await request<{ success: boolean }>(`/api/merchant/products/${encodeURIComponent(productId)}`, {
     method: 'DELETE',
-    headers: getAuthHeaders(),
   })
-  if (!res.ok) throw new Error(`删除展品失败: ${res.status}`)
 }
 
-export async function toggleProductWishlist(productId: string, boothId: string): Promise<ProductWishlistResponse> {
-  const res = await fetch(`${API_BASE}/exhibition/products/${encodeURIComponent(productId)}/wishlist`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ boothId }),
-  })
-  if (!res.ok) throw new Error(`操作失败: ${res.status}`)
-  return res.json()
-}
-
-export async function updateWishlistPurchased(productId: string, purchased: boolean): Promise<void> {
-  const res = await fetch(`${API_BASE}/exhibition/products/${encodeURIComponent(productId)}/wishlist/purchased`, {
-    method: 'PATCH',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ purchased }),
-  })
-  if (!res.ok) throw new Error(`更新购买状态失败: ${res.status}`)
-}
-
-export async function getWishlist(
-  page = 1,
-  pageSize = 20,
-  purchased?: 'true' | 'false' | 'all',
-  sortBy?: 'createdAt' | 'price' | 'brand',
-  sortOrder?: 'asc' | 'desc',
-): Promise<WishlistListResponse> {
+export async function getWishlist(query: WishlistQuery = {}): Promise<WishlistRecord[]> {
   const params = new URLSearchParams()
-  params.set('page', String(page))
-  params.set('pageSize', String(pageSize))
-  if (purchased && purchased !== 'all') params.set('purchased', purchased)
-  if (sortBy) params.set('sortBy', sortBy)
-  if (sortOrder) params.set('sortOrder', sortOrder)
+  if (query.exhibitionId) params.set('exhibitionId', query.exhibitionId)
+  if (typeof query.purchased === 'boolean') params.set('purchased', String(query.purchased))
+  const qs = params.toString()
+  const path = qs ? `/api/wishlist?${qs}` : '/api/wishlist'
+  return request<WishlistRecord[]>(path, { method: 'GET' })
+}
 
-  const res = await fetch(`${API_BASE}/exhibition/wishlist?${params.toString()}`, {
-    headers: { 'X-User-Id': MOCK_USER_ID },
+export async function addToWishlist(productId: string): Promise<WishlistRecord> {
+  return request<WishlistRecord>('/api/wishlist', {
+    method: 'POST',
+    body: { productId },
   })
-  if (!res.ok) throw new Error(`获取心愿单失败: ${res.status}`)
-  return res.json()
+}
+
+export async function removeFromWishlistApi(productId: string): Promise<void> {
+  await request<{ success: boolean }>(`/api/wishlist/${encodeURIComponent(productId)}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function markWishlistPurchased(productId: string): Promise<WishlistRecord> {
+  return request<WishlistRecord>(`/api/wishlist/${encodeURIComponent(productId)}/purchase`, {
+    method: 'POST',
+  })
+}
+
+export async function unmarkWishlistPurchased(productId: string): Promise<WishlistRecord> {
+  return request<WishlistRecord>(`/api/wishlist/${encodeURIComponent(productId)}/unpurchase`, {
+    method: 'POST',
+  })
+}
+
+export async function uploadImage(file: File): Promise<UploadImageResult> {
+  const form = new FormData()
+  form.append('file', file)
+  return request<UploadImageResult>('/api/upload/image', {
+    method: 'POST',
+    body: form,
+  })
 }

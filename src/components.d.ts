@@ -22,6 +22,7 @@ declare module 'vue' {
     BrandEditDialog: typeof import('./components/exhibition/BrandEditDialog.vue')['default']
     BrandListPanel: typeof import('./components/exhibition/BrandListPanel.vue')['default']
     ChatroomPanel: typeof import('./components/exhibition/ChatroomPanel.vue')['default']
+    ConfirmDialog: typeof import('./components/base/ConfirmDialog.vue')['default']
     DebugMapPanel: typeof import('./components/exhibition/DebugMapPanel.vue')['default']
     ExhibitionBrandHeader: typeof import('./components/exhibition/ExhibitionBrandHeader.vue')['default']
     ExhibitionGiftItem: typeof import('./components/exhibition/ExhibitionGiftItem.vue')['default']
@@ -29,10 +30,15 @@ declare module 'vue' {
     ExhibitionMap: typeof import('./components/exhibition/ExhibitionMap.vue')['default']
     ExhibitionProductItem: typeof import('./components/exhibition/ExhibitionProductItem.vue')['default']
     FavoriteButton: typeof import('./components/base/FavoriteButton.vue')['default']
+    ImageUploader: typeof import('./components/base/ImageUploader.vue')['default']
+    InfoPanel: typeof import('./components/exhibition/InfoPanel.vue')['default']
     LeaderboardPanel: typeof import('./components/exhibition/LeaderboardPanel.vue')['default']
+    LoginDialog: typeof import('./components/auth/LoginDialog.vue')['default']
     ProductDetailDialog: typeof import('./components/exhibition/ProductDetailDialog.vue')['default']
     ProductEditDialog: typeof import('./components/exhibition/ProductEditDialog.vue')['default']
     ProductGallery: typeof import('./components/exhibition/ProductGallery.vue')['default']
+    RouterLink: typeof import('vue-router')['RouterLink']
+    RouterView: typeof import('vue-router')['RouterView']
     WishlistPanel: typeof import('./components/exhibition/WishlistPanel.vue')['default']
   }
 }

@@ -3,8 +3,9 @@ import { computed, ref, watch } from 'vue'
 import BaseTabs from '@/components/base/BaseTabs.vue'
 import BoothBrandHeader from '@/components/exhibition/BoothBrandHeader.vue'
 import BoothProductCard from '@/components/exhibition/BoothProductCard.vue'
-// import BrandEditDialog from '@/components/exhibition/BrandEditDialog.vue'
+import BrandEditDialog from '@/components/exhibition/BrandEditDialog.vue'
 import type { Booth } from '@/api/types'
+import { useMyBrands } from '@/composables/useMyBrands'
 
 const props = defineProps<{
   booth: Booth | null
@@ -51,6 +52,9 @@ const filteredProducts = computed(() => {
 
 const showEditDialog = ref(false)
 
+const { isOwner } = useMyBrands()
+const canEditActiveBrand = computed(() => isOwner(activeBrand.value?.id))
+
 function onEditSaved() {
   emit('updated')
 }
@@ -59,13 +63,14 @@ function onEditSaved() {
 <template>
   <div class="h-full overflow-y-auto hide-scrollbar">
     <template v-if="booth">
-      <BaseTabs v-if="hasMultipleBrands" v-model="activeIndex" :items="brands">
+      <BaseTabs v-if="hasMultipleBrands" v-model="activeIndex" :items="brands" class="pt-0!">
         <template #tab="{ item, isActive }">
           <div class="w-4 h-4 rounded-sm overflow-hidden bg-zinc-900 flex items-center justify-center shrink-0">
             <img v-if="item.logoUrl" :src="item.logoUrl" :alt="item.name" class="w-full h-full object-contain" />
             <i v-else class="i-carbon-building text-zinc-500 text-[10px]" />
           </div>
-          <span class="truncate max-w-28" :class="isActive ? 'text-zinc-100' : 'text-zinc-500'">{{ item.name }}</span>
+          <span class="truncate min-w-0 max-w-28" :class="isActive ? 'text-zinc-100' : 'text-zinc-500'">{{ item.name
+          }}</span>
         </template>
       </BaseTabs>
 
@@ -84,8 +89,8 @@ function onEditSaved() {
         </div>
       </div>
 
-      <BrandEditDialog v-if="activeBrand" v-model:visible="showEditDialog" :brand="activeBrand" :booth-id="booth.id"
-        :products="filteredProducts" @saved="onEditSaved" />
+      <BrandEditDialog v-if="activeBrand && canEditActiveBrand" v-model:visible="showEditDialog" :brand="activeBrand"
+        :exhibition-id="booth.exhibitionId" :products="filteredProducts" @saved="onEditSaved" />
     </template>
 
     <div v-else class="flex flex-col items-center justify-center gap-3 py-12 px-6 text-center">

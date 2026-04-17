@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import BaseDialog from '@/components/base/BaseDialog.vue'
 import type { BoothBrand } from '@/api/types'
 import { useCheckins } from '@/composables/useCheckins'
+import { useMyBrands } from '@/composables/useMyBrands'
 
 const props = defineProps<{
   brand: BoothBrand
@@ -43,6 +44,8 @@ function handleImageError(e: Event) {
 }
 
 const { isCheckedIn } = useCheckins()
+const { isOwner } = useMyBrands()
+const canEdit = computed(() => isOwner(props.brand.id))
 
 const hasContact = computed(() => {
   const { contactType, contact, contactImageUrl, wechatQrUrl } = props.brand
@@ -88,7 +91,8 @@ const getContactLabel = computed(() => {
 
     <!-- Logo -->
     <div class="w-14 h-14 rounded-xl overflow-hidden bg-zinc-800 flex items-center justify-center shrink-0">
-      <img :src="brand.logoUrl" :alt="brand.name" class="w-full h-full object-contain" @error="handleImageError" />
+      <img :src="brand.logoUrl ?? undefined" :alt="brand.name" class="w-full h-full object-contain"
+        @error="handleImageError" />
       <div class="w-full h-full items-center justify-center text-zinc-600 text-2xl" style="display: none;">
         <i class="i-carbon-building" />
       </div>
@@ -143,12 +147,12 @@ const getContactLabel = computed(() => {
           {{ getContactLabel }}
         </button>
 
-        <!-- <button
+        <button v-if="canEdit"
           class="inline-flex items-center gap-1 text-[11px] px-2.5 py-2 lh-none rounded-full border bg-zinc-800 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer ml-auto"
           @click.stop="emit('edit')">
           <i class="i-carbon-edit text-[11px]" />
           编辑
-        </button> -->
+        </button>
       </div>
 
       <BaseDialog v-model:visible="showContactDialog" title="联系方式">

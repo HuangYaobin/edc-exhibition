@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useWishlist, type SortBy, type PurchasedFilter } from '@/composables/useWishlist'
+import { useAuth } from '@/composables/useAuth'
+import { openLoginDialog } from '@/composables/useLoginDialog'
+import { useMessage } from '@/composables/useMessage'
 
 const emit = defineEmits<{
   (e: 'highlight-booth', boothNumber: string, brandName?: string): void
@@ -19,8 +22,32 @@ const {
   isLoading,
 } = useWishlist()
 
+const { isLoggedIn, maskedIdentifier, logout, forgetIdentifier } = useAuth()
+const message = useMessage()
+const showAccountMenu = ref(false)
+const accountMenuRef = ref<HTMLElement | null>(null)
+
+function handleDocumentClick(e: MouseEvent) {
+  if (!showAccountMenu.value) return
+  const wrapper = accountMenuRef.value
+  if (wrapper && !wrapper.contains(e.target as Node)) {
+    showAccountMenu.value = false
+  }
+}
+
 onMounted(() => {
-  loadWishlist(true)
+  if (isLoggedIn.value) {
+    loadWishlist(true)
+  }
+  document.addEventListener('click', handleDocumentClick)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDocumentClick)
+})
+
+watch(isLoggedIn, (val) => {
+  if (val) loadWishlist(true)
 })
 
 const filterMode = ref<'pending' | 'purchased' | 'all'>('pending')
@@ -33,19 +60,42 @@ function getPurchasedFilter(mode: 'pending' | 'purchased' | 'all'): PurchasedFil
 }
 
 watch([filterMode, sortMode], ([newFilter, newSort]) => {
+  if (!isLoggedIn.value) return
   loadWishlist(true, newSort, 'desc', getPurchasedFilter(newFilter))
 })
+
+async function handleLoginClick() {
+  try {
+    await openLoginDialog()
+  } catch {
+    /* user cancelled */
+  }
+}
+
+async function handleLogout() {
+  showAccountMenu.value = false
+  await logout()
+  message.success('已退出登录')
+}
+
+function handleSwitchAccount() {
+  showAccountMenu.value = false
+  forgetIdentifier()
+  logout().finally(() => {
+    handleLoginClick()
+  })
+}
 
 const pendingPurchaseIds = ref<Set<string>>(new Set())
 
 const filteredItems = computed(() => {
   const pids = pendingPurchaseIds.value
   let list: typeof wishlistItems.value
-  
+
   if (filterMode.value === 'all') {
     list = [...wishlistItems.value]
   } else if (filterMode.value === 'purchased') {
-    list = [...wishlistItems.value]
+    list = wishlistItems.value.filter(i => i.purchased)
   } else {
     const alreadyPending = wishlistItems.value.filter(i => i.purchased && pids.has(i.productId))
     list = [...wishlistItems.value.filter(i => !i.purchased), ...alreadyPending]
@@ -71,8 +121,13 @@ function handleImageError(e: Event) {
 
 function handleMarkPurchased(productId: string) {
   pendingPurchaseIds.value = new Set([...pendingPurchaseIds.value, productId])
+  // Fire the mark API immediately. The row stays visible because `alreadyPending`
+  // keeps purchased items that are still in `pendingPurchaseIds`. After the badge
+  // animation completes, removing the id from the pending set is the single
+  // reactive change that drops the row from `filteredItems`, which lets
+  // <TransitionGroup> register a clean leave and play its transition.
+  markAsPurchased(productId).catch(() => { })
   setTimeout(() => {
-    markAsPurchased(productId)
     const next = new Set([...pendingPurchaseIds.value])
     next.delete(productId)
     pendingPurchaseIds.value = next
@@ -93,9 +148,49 @@ function handleRowClick(boothNumber: string, brandName?: string) {
 
 <template>
   <div class="h-full flex flex-col overflow-hidden bg-zinc-800 rounded-xl">
-    <!-- Empty state - 全部数据为空 -->
-    <div v-if="allItems.length === 0 && !isLoading"
-      class="flex flex-col items-center justify-center gap-4 py-16 px-6 text-center flex-1">
+    <!-- Not logged in state -->
+    <div v-if="!isLoggedIn" class="flex flex-col items-center justify-center gap-4 py-16 px-6 text-center flex-1">
+      <div class="w-16 h-16 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+        <i class="i-carbon-user-avatar text-3xl text-zinc-600" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <p class="text-sm font-medium text-zinc-400 m-0">登录后即可保存心愿单</p>
+        <p class="text-xs text-zinc-600 m-0 leading-relaxed max-w-[220px]">
+          仅需手机号或邮箱，免密登录，云端同步，下次访问自动免登
+        </p>
+      </div>
+      <button type="button"
+        class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-medium text-zinc-900 bg-amber-400 hover:bg-amber-300 rounded-full cursor-pointer transition-colors"
+        @click="handleLoginClick">
+        <i class="i-carbon-login text-sm" />
+        立即登录
+      </button>
+    </div>
+
+    <!-- Empty state - 全部数据为空（已登录但心愿单为空） -->
+    <div v-else-if="allItems.length === 0 && !isLoading"
+      class="flex flex-col items-center justify-center gap-4 py-16 px-6 text-center flex-1 relative">
+      <div ref="accountMenuRef" class="absolute top-3 right-3">
+        <button type="button"
+          class="inline-flex items-center gap-1 text-[11px] text-zinc-500 hover:text-zinc-300 bg-zinc-800/60 border border-zinc-700/60 rounded-full px-2 py-1 cursor-pointer transition-colors"
+          @click="showAccountMenu = !showAccountMenu">
+          <i class="i-carbon-user-avatar text-xs" />
+          {{ maskedIdentifier() ?? '账号' }}
+        </button>
+        <div v-if="showAccountMenu"
+          class="absolute right-0 mt-1 min-w-[120px] bg-zinc-900 border border-zinc-700/60 rounded-lg shadow-lg overflow-hidden z-10">
+          <button type="button"
+            class="block w-full text-left px-3 py-2 text-[11px] text-zinc-300 hover:bg-zinc-800 cursor-pointer bg-transparent border-none"
+            @click="handleSwitchAccount">
+            切换账号
+          </button>
+          <button type="button"
+            class="block w-full text-left px-3 py-2 text-[11px] text-rose-400 hover:bg-zinc-800 cursor-pointer bg-transparent border-none border-t border-zinc-800"
+            @click="handleLogout">
+            退出登录
+          </button>
+        </div>
+      </div>
       <div class="w-16 h-16 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center">
         <i class="i-carbon-favorite text-3xl text-zinc-600" />
       </div>
@@ -133,6 +228,27 @@ function handleRowClick(boothNumber: string, brandName?: string) {
               ¥{{ formatPrice(pendingTotal) }}
             </span>
           </div>
+          <div ref="accountMenuRef" class="ml-auto relative">
+            <button type="button"
+              class="inline-flex items-center gap-1 text-[11px] text-zinc-500 hover:text-zinc-300 bg-zinc-800/60 border border-zinc-700/60 rounded-full px-2 py-1 cursor-pointer transition-colors"
+              @click="showAccountMenu = !showAccountMenu">
+              <i class="i-carbon-user-avatar text-xs" />
+              {{ maskedIdentifier() ?? '账号' }}
+            </button>
+            <div v-if="showAccountMenu"
+              class="absolute right-0 mt-1 min-w-[120px] bg-zinc-900 border border-zinc-700/60 rounded-lg shadow-lg overflow-hidden z-10">
+              <button type="button"
+                class="block w-full text-left px-3 py-2 text-[11px] text-zinc-300 hover:bg-zinc-800 cursor-pointer bg-transparent border-none"
+                @click="handleSwitchAccount">
+                切换账号
+              </button>
+              <button type="button"
+                class="block w-full text-left px-3 py-2 text-[11px] text-rose-400 hover:bg-zinc-800 cursor-pointer bg-transparent border-none border-t border-zinc-800"
+                @click="handleLogout">
+                退出登录
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -151,24 +267,22 @@ function handleRowClick(boothNumber: string, brandName?: string) {
             {{ label }}
           </button>
         </div>
-        <div class="flex items-center gap-1">
+        <!-- <div class="flex items-center gap-1">
           <button v-for="({ key, label }) in ([
             { key: 'price' as const, label: '按价格' },
             { key: 'brand' as const, label: '按品牌' },
-          ])" :key="key" class="text-[11px] px-2 py-1 rounded-full transition-colors cursor-pointer border"
-            :class="sortMode === key
-              ? 'bg-zinc-700 text-zinc-300 border-zinc-600'
-              : 'bg-transparent text-zinc-600 border-transparent hover:text-zinc-400'" @click="sortMode = key">
+          ])" :key="key" class="text-[11px] px-2 py-1 rounded-full transition-colors cursor-pointer border" :class="sortMode === key
+            ? 'bg-zinc-700 text-zinc-300 border-zinc-600'
+            : 'bg-transparent text-zinc-600 border-transparent hover:text-zinc-400'" @click="sortMode = key">
             {{ label }}
           </button>
-        </div>
+        </div> -->
       </div>
 
       <!-- Item list -->
       <div class="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
         <!-- Loading state -->
-        <div v-if="isLoading"
-          class="flex flex-col items-center justify-center gap-2 py-12">
+        <div v-if="isLoading" class="flex flex-col items-center justify-center gap-2 py-12">
           <div class="w-6 h-6 border-2 border-zinc-600 border-t-amber-400 rounded-full animate-spin" />
           <span class="text-xs text-zinc-500">加载中...</span>
         </div>

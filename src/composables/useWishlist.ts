@@ -1,6 +1,13 @@
-import { computed, ref } from 'vue'
-import { getWishlist, toggleProductWishlist, updateWishlistPurchased } from '@/api'
-import type { WishlistItem as ApiWishlistItem } from '@/api/types'
+import { computed, ref, watch } from 'vue'
+import {
+  addToWishlist,
+  getWishlist,
+  markWishlistPurchased,
+  removeFromWishlistApi,
+  unmarkWishlistPurchased,
+} from '@/api'
+import type { WishlistRecord } from '@/api/types'
+import { useAuth } from '@/composables/useAuth'
 
 export type SortBy = 'createdAt' | 'price' | 'brand'
 export type SortOrder = 'asc' | 'desc'
@@ -24,21 +31,58 @@ const isLoading = ref(false)
 const isLoaded = ref(false)
 const wishlistProductIds = ref<string[]>([])
 
-function mapApiItem(item: ApiWishlistItem): WishlistItem {
+function mapApiItem(record: WishlistRecord): WishlistItem {
+  const product = record.product
   return {
-    productId: item.productId,
-    productName: item.productName,
-    productImage: item.productImage ?? undefined,
-    productPrice: item.productPrice ?? undefined,
-    boothId: item.boothId,
-    boothNumber: item.boothNumber,
-    brandName: item.brandName,
-    addedAt: new Date(item.addedAt).getTime(),
-    purchased: item.purchased,
+    productId: record.productId,
+    productName: product.name,
+    productImage: product.imageUrl ?? undefined,
+    productPrice: product.price ?? undefined,
+    boothId: product.boothId,
+    boothNumber: product.booth?.boothNumber ?? '',
+    brandName: '',
+    addedAt: new Date(record.createdAt).getTime(),
+    purchased: !!record.purchasedAt,
   }
 }
 
+function applyFilterAndSort(
+  list: WishlistItem[],
+  purchased: PurchasedFilter,
+  sortBy: SortBy,
+  sortOrder: SortOrder,
+): WishlistItem[] {
+  let result = list
+  if (purchased === 'true') result = result.filter(i => i.purchased)
+  else if (purchased === 'false') result = result.filter(i => !i.purchased)
+
+  const dir = sortOrder === 'asc' ? 1 : -1
+  const sorted = [...result].sort((a, b) => {
+    if (sortBy === 'price') return ((a.productPrice ?? 0) - (b.productPrice ?? 0)) * dir
+    if (sortBy === 'brand') return a.brandName.localeCompare(b.brandName) * dir
+    return (a.addedAt - b.addedAt) * dir
+  })
+  return sorted
+}
+
+let registeredAuthWatcher = false
+
 export function useWishlist() {
+  const auth = useAuth()
+  const { ensureAuth, isLoggedIn } = auth
+
+  if (!registeredAuthWatcher) {
+    registeredAuthWatcher = true
+    watch(isLoggedIn, (val) => {
+      if (!val) {
+        items.value = []
+        allItems.value = []
+        wishlistProductIds.value = []
+        isLoaded.value = false
+      }
+    })
+  }
+
   const wishlistItems = computed(() => items.value)
   const wishlistCount = computed(() => items.value.length)
 
@@ -55,106 +99,152 @@ export function useWishlist() {
     purchased?: PurchasedFilter,
   ) {
     if ((isLoaded.value || isLoading.value) && !force) return
+    try {
+      await ensureAuth()
+    } catch {
+      return
+    }
     isLoading.value = true
     const sort = sortBy ?? 'createdAt'
     const order = sortOrder ?? 'desc'
     const filter = purchased ?? 'all'
     try {
-      const response = await getWishlist(1, 100, filter, sort, order)
-      console.log('Wishlist API response:', response)
-      const list = response.list || (response as any).data?.list || []
-      console.log('Wishlist list:', list)
-      const mapped = list.map(mapApiItem)
-      items.value = mapped
-      wishlistProductIds.value = mapped.map(i => i.productId)
-      if (filter === 'all') {
-        allItems.value = mapped
-      }
-      console.log('Mapped items:', items.value)
-      isLoaded.value = true
+      const records = await getWishlist()
+      const mappedAll = records.map(mapApiItem)
+      allItems.value = mappedAll
+      const view = applyFilterAndSort(mappedAll, filter, sort, order)
+      items.value = view
+      wishlistProductIds.value = mappedAll.map(i => i.productId)
     } catch (error) {
       console.warn('Failed to load wishlist:', error)
     } finally {
       isLoading.value = false
+      isLoaded.value = true
     }
   }
 
   function isInWishlist(productId: string): boolean {
-    if (!isLoaded.value && !isLoading.value) {
-      loadWishlist()
-    }
     return wishlistProductIds.value.includes(productId)
   }
 
   async function toggleWishlist(item: Omit<WishlistItem, 'addedAt' | 'purchased'>) {
     try {
-      const response = await toggleProductWishlist(item.productId, item.boothId)
-      if (response.isInWishlist) {
-        if (!isInWishlist(item.productId)) {
-          items.value = [...items.value, { ...item, addedAt: Date.now(), purchased: false }]
-          allItems.value = [...allItems.value, { ...item, addedAt: Date.now(), purchased: false }]
-          wishlistProductIds.value = [...wishlistProductIds.value, item.productId]
-        }
-      } else {
-        items.value = items.value.filter(i => i.productId !== item.productId)
-        allItems.value = allItems.value.filter(i => i.productId !== item.productId)
-        wishlistProductIds.value = wishlistProductIds.value.filter(id => id !== item.productId)
+      await ensureAuth()
+    } catch {
+      return { isInWishlist: isInWishlist(item.productId) }
+    }
+    const currentlyIn = isInWishlist(item.productId)
+
+    if (currentlyIn) {
+      const prevItems = items.value
+      const prevAll = allItems.value
+      const prevIds = wishlistProductIds.value
+      items.value = items.value.filter(i => i.productId !== item.productId)
+      allItems.value = allItems.value.filter(i => i.productId !== item.productId)
+      wishlistProductIds.value = wishlistProductIds.value.filter(id => id !== item.productId)
+      try {
+        await removeFromWishlistApi(item.productId)
+        return { isInWishlist: false }
+      } catch (error) {
+        items.value = prevItems
+        allItems.value = prevAll
+        wishlistProductIds.value = prevIds
+        console.error('Failed to toggle wishlist:', error)
+        throw error
       }
-      return response
+    }
+
+    const optimistic: WishlistItem = {
+      ...item,
+      addedAt: Date.now(),
+      purchased: false,
+    }
+    const prevItems = items.value
+    const prevAll = allItems.value
+    const prevIds = wishlistProductIds.value
+    items.value = [...items.value, optimistic]
+    allItems.value = [...allItems.value, optimistic]
+    wishlistProductIds.value = [...wishlistProductIds.value, item.productId]
+    try {
+      const record = await addToWishlist(item.productId)
+      const mapped: WishlistItem = {
+        ...item,
+        addedAt: new Date(record.createdAt).getTime(),
+        purchased: !!record.purchasedAt,
+      }
+      items.value = items.value.map(i => (i.productId === item.productId ? mapped : i))
+      allItems.value = allItems.value.map(i => (i.productId === item.productId ? mapped : i))
+      return { isInWishlist: true }
     } catch (error) {
+      items.value = prevItems
+      allItems.value = prevAll
+      wishlistProductIds.value = prevIds
       console.error('Failed to toggle wishlist:', error)
       throw error
     }
   }
 
   async function removeFromWishlist(productId: string) {
-    const item = items.value.find(i => i.productId === productId)
-    if (!item) return
     try {
-      await toggleProductWishlist(productId, item.boothId)
-      items.value = items.value.filter(i => i.productId !== productId)
-      allItems.value = allItems.value.filter(i => i.productId !== productId)
-      wishlistProductIds.value = wishlistProductIds.value.filter(id => id !== productId)
+      await ensureAuth()
+    } catch {
+      return
+    }
+    const prevItems = items.value
+    const prevAll = allItems.value
+    const prevIds = wishlistProductIds.value
+    items.value = items.value.filter(i => i.productId !== productId)
+    allItems.value = allItems.value.filter(i => i.productId !== productId)
+    wishlistProductIds.value = wishlistProductIds.value.filter(id => id !== productId)
+    try {
+      await removeFromWishlistApi(productId)
     } catch (error) {
+      items.value = prevItems
+      allItems.value = prevAll
+      wishlistProductIds.value = prevIds
       console.error('Failed to remove from wishlist:', error)
       throw error
     }
   }
 
-  async function markAsPurchased(productId: string) {
+  async function setPurchased(productId: string, purchased: boolean) {
     try {
-      await updateWishlistPurchased(productId, true)
-      items.value = items.value.map(i =>
-        i.productId === productId ? { ...i, purchased: true } : i,
-      )
-      allItems.value = allItems.value.map(i =>
-        i.productId === productId ? { ...i, purchased: true } : i,
-      )
+      await ensureAuth()
+    } catch {
+      return
+    }
+    const prevItems = items.value
+    const prevAll = allItems.value
+    items.value = items.value.map(i =>
+      i.productId === productId ? { ...i, purchased } : i,
+    )
+    allItems.value = allItems.value.map(i =>
+      i.productId === productId ? { ...i, purchased } : i,
+    )
+    try {
+      if (purchased) await markWishlistPurchased(productId)
+      else await unmarkWishlistPurchased(productId)
     } catch (error) {
-      console.error('Failed to mark as purchased:', error)
+      items.value = prevItems
+      allItems.value = prevAll
+      console.error(`Failed to ${purchased ? 'mark' : 'unmark'} as purchased:`, error)
       throw error
     }
   }
 
+  async function markAsPurchased(productId: string) {
+    return setPurchased(productId, true)
+  }
+
   async function unmarkAsPurchased(productId: string) {
-    try {
-      await updateWishlistPurchased(productId, false)
-      items.value = items.value.map(i =>
-        i.productId === productId ? { ...i, purchased: false } : i,
-      )
-      allItems.value = allItems.value.map(i =>
-        i.productId === productId ? { ...i, purchased: false } : i,
-      )
-    } catch (error) {
-      console.error('Failed to unmark as purchased:', error)
-      throw error
-    }
+    return setPurchased(productId, false)
   }
 
   function clearWishlist() {
     items.value = []
     allItems.value = []
     wishlistProductIds.value = []
+    isLoaded.value = false
   }
 
   return {

@@ -1,30 +1,41 @@
+export interface ExhibitionTag {
+  id: string
+  exhibitionId?: string
+  name: string
+  color: string | null
+  sort: number
+}
+
 export interface BoothBrand {
   id: string
   boothId: string
+  ownerUserId?: string | null
   name: string
-  nameEn?: string
-  description?: string
-  logoUrl?: string
-  wechatQrUrl?: string
-  contact?: string
-  contactImageUrl?: string
-  contactType?: string
+  nameEn?: string | null
+  description?: string | null
+  logoUrl?: string | null
+  /** @deprecated 后端新接口不再维护，仅用于兼容存量数据展示 */
+  wechatQrUrl?: string | null
+  contact?: string | null
+  contactImageUrl?: string | null
+  contactType?: 'text' | 'image'
   sort: number
 }
 
 export interface BoothProduct {
   id: string
   boothId: string
-  brandId?: string
+  brandId?: string | null
   name: string
-  description?: string
+  description?: string | null
   imageUrl?: string | null
-  material?: string
+  material?: string | null
   price?: number | null
-  salesRule?: string
-  totalQuantity?: number
+  salesRule?: string | null
+  totalQuantity?: number | null
   wishlistCount?: number
   sort: number
+  tags?: ExhibitionTag[]
   createdAt?: string
   updatedAt?: string
 }
@@ -72,23 +83,41 @@ export interface LeaderboardData {
 
 export interface UpdateBrandPayload {
   name?: string
-  nameEn?: string
-  description?: string
-  logoUrl?: string
-  wechatQrUrl?: string
-  contact?: string
-  contactImageUrl?: string
-  contactType?: string
+  nameEn?: string | null
+  description?: string | null
+  logoUrl?: string | null
+  contact?: string | null
+  contactImageUrl?: string | null
+  contactType?: 'text' | 'image'
+  sort?: number
 }
 
-export interface UpsertProductPayload {
+export interface CreateProductPayload {
+  brandId: string
   name: string
-  description?: string
-  imageUrl?: string
-  material?: string
-  price?: number
-  salesRule?: string
-  totalQuantity?: number
+  description?: string | null
+  imageUrl?: string | null
+  /** 单位：分 */
+  price?: number | null
+  totalQuantity?: number | null
+  material?: string | null
+  salesRule?: string | null
+  sort?: number
+  tagIds?: string[]
+}
+
+export interface UpdateProductPayload {
+  brandId?: string
+  name?: string
+  description?: string | null
+  imageUrl?: string | null
+  /** 单位：分 */
+  price?: number | null
+  totalQuantity?: number | null
+  material?: string | null
+  salesRule?: string | null
+  sort?: number
+  tagIds?: string[]
 }
 
 export interface Exhibition {
@@ -105,26 +134,48 @@ export interface Exhibition {
   contactEmail?: string
 }
 
-export interface ProductWishlistResponse {
-  isInWishlist: boolean
-  wishlistCount: number
-}
-
-export interface WishlistItem {
+export interface WishlistProductBooth {
   id: string
-  productId: string
-  productName: string
-  productImage?: string | null
-  productPrice?: number | null
-  boothId: string
   boothNumber: string
-  brandName: string
-  purchased: boolean
-  addedAt: string
+  exhibitionId: string
 }
 
-export interface WishlistListResponse {
-  list: WishlistItem[]
-  total: number
-  hasMore: boolean
+export interface WishlistProduct {
+  id: string
+  boothId: string
+  brandId: string | null
+  name: string
+  description: string | null
+  imageUrl: string | null
+  price: number | null
+  totalQuantity: number | null
+  material: string | null
+  salesRule: string | null
+  wishlistCount: number
+  sort: number
+  createdAt: string
+  updatedAt: string
+  booth: WishlistProductBooth
+}
+
+export interface WishlistRecord {
+  id: string
+  userId: string
+  productId: string
+  purchasedAt: string | null
+  createdAt: string
+  updatedAt: string
+  product: WishlistProduct
+}
+
+export interface WishlistQuery {
+  exhibitionId?: string
+  purchased?: boolean
+}
+
+export interface UploadImageResult {
+  ossKey: string
+  url: string
+  size: number
+  mimeType: string
 }

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import ProductDetailDialog from '@/components/exhibition/ProductDetailDialog.vue'
+import FavoriteButton from '@/components/base/FavoriteButton.vue'
+import { useWishlist } from '@/composables/useWishlist'
 import type { BoothProduct } from '@/api/types'
 
 const props = defineProps<{
@@ -18,7 +20,27 @@ function handleImageError(e: Event) {
   if (placeholder) placeholder.style.display = 'flex'
 }
 
-// const { wishlistProductIds, toggleWishlist } = useWishlist()
+const { isInWishlist, toggleWishlist } = useWishlist()
+
+const isToggling = ref(false)
+
+async function handleToggleWishlist() {
+  if (isToggling.value) return
+  isToggling.value = true
+  try {
+    await toggleWishlist({
+      productId: props.product.id,
+      productName: props.product.name,
+      productImage: props.product.imageUrl ?? undefined,
+      productPrice: props.product.price ?? undefined,
+      boothId: props.product.boothId,
+      boothNumber: props.boothNumber,
+      brandName: props.brandName,
+    })
+  } finally {
+    isToggling.value = false
+  }
+}
 </script>
 
 <template>
@@ -55,24 +77,25 @@ function handleImageError(e: Event) {
           </div>
           <span v-else class="text-zinc-600 text-sm font-medium">暂无定价</span>
 
-          <span v-if="product.totalQuantity != null" class="text-[10px] font-medium leading-none px-2 py-1 rounded border mb-0.5" :class="[
-            product.totalQuantity === 9999
-              ? 'text-zinc-500 border-zinc-600'
-              : product.totalQuantity > 0
-                ? 'text-zinc-300 border-zinc-500'
-                : 'text-rose-400 border-rose-500'
-          ]">
-            {{ product.totalQuantity === 9999 ? '不限量' : product.totalQuantity > 0 ? `限量 ${product.totalQuantity}` : '已售罄' }}
+          <span v-if="product.totalQuantity != null"
+            class="text-[10px] font-medium leading-none px-2 py-1 rounded border mb-0.5" :class="[
+              product.totalQuantity === 9999
+                ? 'text-zinc-500 border-zinc-600'
+                : product.totalQuantity > 0
+                  ? 'text-zinc-300 border-zinc-500'
+                  : 'text-rose-400 border-rose-500'
+            ]">
+            {{ product.totalQuantity == null ? '不限量' : product.totalQuantity > 0 ? `限量 ${product.totalQuantity}` : '已售罄'
+            }}
           </span>
+
+          <FavoriteButton :active="isInWishlist(product.id)" :disabled="isToggling" class="ml-auto" @click.stop
+            @toggle="handleToggleWishlist" />
         </div>
       </div>
     </div>
   </div>
 
-  <ProductDetailDialog
-    v-model:visible="showDetailDialog"
-    :product="product"
-    :booth-number="boothNumber"
-    :brand-name="brandName"
-  />
+  <ProductDetailDialog v-model:visible="showDetailDialog" :product="product" :booth-number="boothNumber"
+    :brand-name="brandName" />
 </template>

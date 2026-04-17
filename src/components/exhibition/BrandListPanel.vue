@@ -14,6 +14,11 @@ const emit = defineEmits<{
 const loading = ref(true)
 const brandEntries = ref<BrandEntry[]>([])
 const searchQuery = ref('')
+const failedLogos = ref<Set<string>>(new Set())
+
+function handleLogoError(brandId: string) {
+  failedLogos.value.add(brandId)
+}
 
 const filteredBrands = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
@@ -73,7 +78,8 @@ onMounted(async () => {
         <!-- Logo -->
         <div
           class="w-9 h-9 rounded-lg overflow-hidden bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0">
-          <img v-if="brand.logoUrl" :src="brand.logoUrl" :alt="brand.name" class="w-full h-full object-contain" />
+          <img v-if="brand.logoUrl && !failedLogos.has(brand.id)" :src="brand.logoUrl" :alt="brand.name"
+            class="w-full h-full object-contain" @error="handleLogoError(brand.id)" />
           <i v-else class="i-carbon-building text-zinc-500 text-base" />
         </div>
 
