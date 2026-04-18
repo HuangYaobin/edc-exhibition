@@ -16,7 +16,7 @@ import BaseTabBar from '@/components/base/BaseTabBar.vue'
 import type { TabBarItem } from '@/components/base/BaseTabBar.vue'
 import LoginDialog from '@/components/auth/LoginDialog.vue'
 import ConfirmDialog from '@/components/base/ConfirmDialog.vue'
-import { getBoothByNumber } from '@/api'
+import { getBoothByNumber, getOngoingExhibition, recordExhibitionView } from '@/api'
 import type { Booth } from '@/api/types'
 // import { useWishlist } from '@/composables/useWishlist'
 
@@ -140,6 +140,13 @@ watch(
 
 onMounted(async () => {
   // loadWishlist()
+  
+  // 获取展会信息并记录浏览量
+  const exhibition = await getOngoingExhibition()
+  if (exhibition?.id) {
+    recordExhibitionView(exhibition.id)
+  }
+  
   const rawId = route.params.id
   const id = typeof rawId === 'string' && rawId ? rawId : null
   if (!id) {

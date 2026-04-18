@@ -19,7 +19,8 @@ const API_BASE = '/api'
 export async function getOngoingExhibition(): Promise<Exhibition | null> {
   const res = await fetch(`${API_BASE}/exhibition`)
   if (!res.ok) return null
-  return res.json()
+  const response = await res.json()
+  return response.data || null
 }
 
 export async function getBoothByNumber(boothNumber: string, exhibitionId?: string): Promise<Booth | null> {
@@ -149,4 +150,12 @@ export async function uploadImage(file: File): Promise<UploadImageResult> {
     method: 'POST',
     body: form,
   })
+}
+
+export async function recordExhibitionView(exhibitionId: string): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/exhibition/${encodeURIComponent(exhibitionId)}/view`, {
+      method: 'POST',
+    })
+  } catch {}
 }

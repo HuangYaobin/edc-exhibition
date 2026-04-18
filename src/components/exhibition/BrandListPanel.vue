@@ -23,7 +23,6 @@ function handleLogoError(brandId: string) {
 function onSearchFocus() {
   setTimeout(() => {
     window.scrollTo(0, 0)
-    document.body.scrollTop = 0
   }, 100)
 }
 
