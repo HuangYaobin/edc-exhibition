@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import Sortable, { type SortableEvent } from 'sortablejs'
 import { useWishlist, type SortBy, type PurchasedFilter } from '@/composables/useWishlist'
 import { useAuth } from '@/composables/useAuth'
 import { openLoginDialog } from '@/composables/useLoginDialog'
@@ -7,6 +8,7 @@ import { useMessage } from '@/composables/useMessage'
 
 const emit = defineEmits<{
   (e: 'highlight-booth', boothNumber: string, brandName?: string): void
+  (e: 'drag-state', dragging: boolean): void
 }>()
 
 const {
@@ -15,10 +17,12 @@ const {
   markAsPurchased,
   unmarkAsPurchased,
   loadWishlist,
+  reorderItems,
   pendingItems,
   purchasedItems,
   pendingTotal,
   allItems,
+  customOrder,
   isLoading,
 } = useWishlist()
 
@@ -37,7 +41,7 @@ function handleDocumentClick(e: MouseEvent) {
 
 onMounted(() => {
   if (isLoggedIn.value) {
-    loadWishlist(true)
+    reloadWithCurrentView()
   }
   document.addEventListener('click', handleDocumentClick)
 })
@@ -47,11 +51,14 @@ onBeforeUnmount(() => {
 })
 
 watch(isLoggedIn, (val) => {
-  if (val) loadWishlist(true)
+  if (val) reloadWithCurrentView()
 })
 
 const filterMode = ref<'pending' | 'purchased' | 'all'>('pending')
-const sortMode = ref<SortBy>('price')
+const sortMode = ref<SortBy>('custom')
+
+// 展位号是字母+数字混合（A1、A10、B2 等），numeric 选项让 A2 排在 A10 前面。
+const boothCollator = new Intl.Collator('zh-Hans-CN', { numeric: true, sensitivity: 'base' })
 
 function getPurchasedFilter(mode: 'pending' | 'purchased' | 'all'): PurchasedFilter {
   if (mode === 'pending') return 'false'
@@ -59,10 +66,11 @@ function getPurchasedFilter(mode: 'pending' | 'purchased' | 'all'): PurchasedFil
   return 'all'
 }
 
-watch([filterMode, sortMode], ([newFilter, newSort]) => {
-  if (!isLoggedIn.value) return
-  loadWishlist(true, newSort, 'desc', getPurchasedFilter(newFilter))
-})
+function reloadWithCurrentView() {
+  return loadWishlist(true, sortMode.value, 'desc', getPurchasedFilter(filterMode.value))
+}
+
+watch([filterMode, sortMode], reloadWithCurrentView)
 
 async function handleLoginClick() {
   try {
@@ -101,11 +109,18 @@ const filteredItems = computed(() => {
     list = [...wishlistItems.value.filter(i => !i.purchased), ...alreadyPending]
   }
 
+  if (sortMode.value === 'custom') {
+    return list
+  }
   if (sortMode.value === 'price') {
     return list.sort((a, b) => (b.productPrice ?? 0) - (a.productPrice ?? 0))
   }
-  return list.sort((a, b) => a.brandName.localeCompare(b.brandName))
+  return list.sort((a, b) => boothCollator.compare(a.boothNumber, b.boothNumber))
 })
+
+const isDragEnabled = computed(
+  () => sortMode.value === 'custom' && filterMode.value !== 'purchased',
+)
 
 function formatPrice(cents: number) {
   return (cents / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -144,6 +159,102 @@ function handleRowClick(boothNumber: string, brandName?: string) {
   activeBooth.value = boothNumber
   emit('highlight-booth', boothNumber, brandName)
 }
+
+const listGroupRef = ref<any>(null)
+let sortable: Sortable | null = null
+let sortableEl: HTMLElement | null = null
+
+function getListEl(): HTMLElement | null {
+  const r = listGroupRef.value
+  if (!r) return null
+  return (r.$el ?? r) as HTMLElement
+}
+
+function handleDragStart() {
+  emit('drag-state', true)
+}
+
+function handleDragEnd(evt: SortableEvent) {
+  emit('drag-state', false)
+  const { oldIndex, newIndex } = evt
+  if (oldIndex == null || newIndex == null || oldIndex === newIndex) return
+
+  const visibleIds = filteredItems.value.map(i => i.productId)
+  const [moved] = visibleIds.splice(oldIndex, 1)
+  if (!moved) return
+  visibleIds.splice(newIndex, 0, moved)
+
+  // Merge the new visible order back into the full customOrder so items
+  // hidden by the current filter keep their relative position.
+  const visibleSet = new Set(visibleIds)
+  const fullOrder: string[] = []
+  let vIdx = 0
+  for (const id of customOrder.value) {
+    if (visibleSet.has(id)) {
+      fullOrder.push(visibleIds[vIdx++])
+    } else {
+      fullOrder.push(id)
+    }
+  }
+  while (vIdx < visibleIds.length) {
+    if (!fullOrder.includes(visibleIds[vIdx])) fullOrder.push(visibleIds[vIdx])
+    vIdx++
+  }
+
+  reorderItems(fullOrder).catch(() => {
+    message.error('排序保存失败')
+    if (isLoggedIn.value) reloadWithCurrentView()
+  })
+}
+
+function destroySortable() {
+  if (sortable) {
+    sortable.destroy()
+    sortable = null
+    sortableEl = null
+  }
+}
+
+function setupSortable() {
+  const el = getListEl()
+  if (!el) {
+    destroySortable()
+    return
+  }
+  if (sortable && sortableEl === el) {
+    sortable.option('disabled', !isDragEnabled.value)
+    return
+  }
+  destroySortable()
+  sortableEl = el
+  sortable = new Sortable(el, {
+    animation: 180,
+    delay: 250,
+    delayOnTouchOnly: true,
+    touchStartThreshold: 4,
+    handle: '.drag-area',
+    filter: 'button, [data-no-drag]',
+    preventOnFilter: false,
+    ghostClass: 'wishlist-sortable-ghost',
+    chosenClass: 'wishlist-sortable-chosen',
+    dragClass: 'wishlist-sortable-drag',
+    disabled: !isDragEnabled.value,
+    onStart: handleDragStart,
+    onEnd: handleDragEnd,
+  })
+}
+
+watch(
+  [listGroupRef, isDragEnabled, () => filteredItems.value.length, isLoading],
+  () => {
+    nextTick(setupSortable)
+  },
+  { flush: 'post' },
+)
+
+onBeforeUnmount(() => {
+  destroySortable()
+})
 </script>
 
 <template>
@@ -267,16 +378,17 @@ function handleRowClick(boothNumber: string, brandName?: string) {
             {{ label }}
           </button>
         </div>
-        <!-- <div class="flex items-center gap-1">
+        <div class="flex items-center gap-1">
           <button v-for="({ key, label }) in ([
-            { key: 'price' as const, label: '按价格' },
-            { key: 'brand' as const, label: '按品牌' },
+            { key: 'custom' as const, label: '自定义' },
+            { key: 'price' as const, label: '价格' },
+            { key: 'booth' as const, label: '展位' },
           ])" :key="key" class="text-[11px] px-2 py-1 rounded-full transition-colors cursor-pointer border" :class="sortMode === key
             ? 'bg-zinc-700 text-zinc-300 border-zinc-600'
             : 'bg-transparent text-zinc-600 border-transparent hover:text-zinc-400'" @click="sortMode = key">
             {{ label }}
           </button>
-        </div> -->
+        </div>
       </div>
 
       <!-- Item list -->
@@ -296,9 +408,10 @@ function handleRowClick(boothNumber: string, brandName?: string) {
           </p>
         </div>
 
-        <TransitionGroup v-else name="wishlist-item" tag="div" class="flex flex-col divide-y divide-zinc-800/60">
-          <div v-for="item in filteredItems" :key="item.productId"
-            class="flex gap-3 px-4 py-3 transition-colors duration-300 group cursor-pointer select-none relative"
+        <TransitionGroup v-else ref="listGroupRef" name="wishlist-item" tag="div"
+          class="flex flex-col divide-y divide-zinc-800/60">
+          <div v-for="item in filteredItems" :key="item.productId" :data-id="item.productId"
+            class="drag-area flex gap-3 px-4 py-3 transition-colors duration-300 group cursor-pointer select-none relative"
             :class="activeBooth === item.boothNumber
               ? 'bg-zinc-700/30 active:bg-zinc-700/50'
               : (item.purchased || isPendingPurchase(item.productId))
@@ -449,5 +562,23 @@ function handleRowClick(boothNumber: string, brandName?: string) {
 .booth-bar-leave-to {
   opacity: 0;
   transform: scaleY(0.4);
+}
+
+.wishlist-sortable-ghost {
+  opacity: 0.4;
+  background: rgb(63 63 70 / 0.6);
+  outline: 1px dashed rgb(161 161 170 / 0.5);
+  outline-offset: -2px;
+}
+
+.wishlist-sortable-chosen {
+  background: rgb(63 63 70 / 0.4);
+}
+
+.wishlist-sortable-drag {
+  opacity: 0.95;
+  background: rgb(39 39 42);
+  box-shadow: 0 12px 24px -8px rgb(0 0 0 / 0.5);
+  border-radius: 8px;
 }
 </style>

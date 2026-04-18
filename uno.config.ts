@@ -4,7 +4,13 @@ import presetIcons from 'unocss/preset-icons'
 export default defineConfig({
   presets: [
     presetUno(),
-    presetIcons(),
+    presetIcons({
+      // Explicit collection: node FS loader often fails inside Vite/Rolldown transform,
+      // so i-carbon-* utilities would emit no CSS in production.
+      collections: {
+        carbon: () => import('@iconify-json/carbon').then((m) => m.icons),
+      },
+    }),
   ],
   rules: [
     ['hide-scrollbar', {

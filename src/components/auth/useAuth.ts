@@ -2,7 +2,6 @@ import { computed, ref } from 'vue'
 import { openLoginDialog } from '@/composables/useLoginDialog'
 
 const STORAGE_KEY = 'auth.v1'
-const REFRESH_LEEWAY_MS = 30 * 1000
 
 export interface AuthUser {
   id: string

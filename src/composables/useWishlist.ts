@@ -4,12 +4,13 @@ import {
   getWishlist,
   markWishlistPurchased,
   removeFromWishlistApi,
+  reorderWishlistApi,
   unmarkWishlistPurchased,
 } from '@/api'
 import type { WishlistRecord } from '@/api/types'
 import { useAuth } from '@/composables/useAuth'
 
-export type SortBy = 'createdAt' | 'price' | 'brand'
+export type SortBy = 'createdAt' | 'price' | 'booth' | 'custom'
 export type SortOrder = 'asc' | 'desc'
 export type PurchasedFilter = 'true' | 'false' | 'all'
 
@@ -30,6 +31,26 @@ const allItems = ref<WishlistItem[]>([])
 const isLoading = ref(false)
 const isLoaded = ref(false)
 const wishlistProductIds = ref<string[]>([])
+const customOrder = ref<string[]>([])
+
+// 展位号通常是字母+数字混合（例如 A1、A10、B2、C-101），
+// 用 numeric collation 让 A2 排在 A10 前面，避免按字符串字典序导致的奇怪结果。
+const boothCollator = new Intl.Collator('zh-Hans-CN', { numeric: true, sensitivity: 'base' })
+
+function compareBoothNumber(a: string, b: string): number {
+  if (!a && !b) return 0
+  if (!a) return 1
+  if (!b) return -1
+  return boothCollator.compare(a, b)
+}
+
+function sortByCustomOrder(list: WishlistItem[], order: string[]): WishlistItem[] {
+  if (order.length === 0) return list
+  const idx = new Map(order.map((id, i) => [id, i]))
+  return [...list].sort(
+    (a, b) => (idx.get(a.productId) ?? Number.MAX_SAFE_INTEGER) - (idx.get(b.productId) ?? Number.MAX_SAFE_INTEGER),
+  )
+}
 
 function mapApiItem(record: WishlistRecord): WishlistItem {
   const product = record.product
@@ -56,10 +77,14 @@ function applyFilterAndSort(
   if (purchased === 'true') result = result.filter(i => i.purchased)
   else if (purchased === 'false') result = result.filter(i => !i.purchased)
 
+  if (sortBy === 'custom') {
+    return sortByCustomOrder(result, customOrder.value)
+  }
+
   const dir = sortOrder === 'asc' ? 1 : -1
   const sorted = [...result].sort((a, b) => {
     if (sortBy === 'price') return ((a.productPrice ?? 0) - (b.productPrice ?? 0)) * dir
-    if (sortBy === 'brand') return a.brandName.localeCompare(b.brandName) * dir
+    if (sortBy === 'booth') return compareBoothNumber(a.boothNumber, b.boothNumber) * dir
     return (a.addedAt - b.addedAt) * dir
   })
   return sorted
@@ -78,6 +103,7 @@ export function useWishlist() {
         items.value = []
         allItems.value = []
         wishlistProductIds.value = []
+        customOrder.value = []
         isLoaded.value = false
       }
     })
@@ -105,16 +131,20 @@ export function useWishlist() {
       return
     }
     isLoading.value = true
-    const sort = sortBy ?? 'createdAt'
+    // 后端在未指定排序时已按用户保存的自定义顺序返回，所以前端默认也用 custom，
+    // 这样 items.value 保持接口给的顺序，避免被本地按 createdAt 再排一遍。
+    const sort = sortBy ?? 'custom'
     const order = sortOrder ?? 'desc'
     const filter = purchased ?? 'all'
     try {
       const records = await getWishlist()
       const mappedAll = records.map(mapApiItem)
+      const orderedIds = mappedAll.map(i => i.productId)
+      customOrder.value = orderedIds
       allItems.value = mappedAll
       const view = applyFilterAndSort(mappedAll, filter, sort, order)
       items.value = view
-      wishlistProductIds.value = mappedAll.map(i => i.productId)
+      wishlistProductIds.value = orderedIds
     } catch (error) {
       console.warn('Failed to load wishlist:', error)
     } finally {
@@ -139,9 +169,11 @@ export function useWishlist() {
       const prevItems = items.value
       const prevAll = allItems.value
       const prevIds = wishlistProductIds.value
+      const prevOrder = customOrder.value
       items.value = items.value.filter(i => i.productId !== item.productId)
       allItems.value = allItems.value.filter(i => i.productId !== item.productId)
       wishlistProductIds.value = wishlistProductIds.value.filter(id => id !== item.productId)
+      customOrder.value = customOrder.value.filter(id => id !== item.productId)
       try {
         await removeFromWishlistApi(item.productId)
         return { isInWishlist: false }
@@ -149,6 +181,7 @@ export function useWishlist() {
         items.value = prevItems
         allItems.value = prevAll
         wishlistProductIds.value = prevIds
+        customOrder.value = prevOrder
         console.error('Failed to toggle wishlist:', error)
         throw error
       }
@@ -162,9 +195,11 @@ export function useWishlist() {
     const prevItems = items.value
     const prevAll = allItems.value
     const prevIds = wishlistProductIds.value
+    const prevOrder = customOrder.value
     items.value = [...items.value, optimistic]
     allItems.value = [...allItems.value, optimistic]
     wishlistProductIds.value = [...wishlistProductIds.value, item.productId]
+    customOrder.value = [...customOrder.value, item.productId]
     try {
       const record = await addToWishlist(item.productId)
       const mapped: WishlistItem = {
@@ -179,6 +214,7 @@ export function useWishlist() {
       items.value = prevItems
       allItems.value = prevAll
       wishlistProductIds.value = prevIds
+      customOrder.value = prevOrder
       console.error('Failed to toggle wishlist:', error)
       throw error
     }
@@ -193,15 +229,18 @@ export function useWishlist() {
     const prevItems = items.value
     const prevAll = allItems.value
     const prevIds = wishlistProductIds.value
+    const prevOrder = customOrder.value
     items.value = items.value.filter(i => i.productId !== productId)
     allItems.value = allItems.value.filter(i => i.productId !== productId)
     wishlistProductIds.value = wishlistProductIds.value.filter(id => id !== productId)
+    customOrder.value = customOrder.value.filter(id => id !== productId)
     try {
       await removeFromWishlistApi(productId)
     } catch (error) {
       items.value = prevItems
       allItems.value = prevAll
       wishlistProductIds.value = prevIds
+      customOrder.value = prevOrder
       console.error('Failed to remove from wishlist:', error)
       throw error
     }
@@ -244,7 +283,33 @@ export function useWishlist() {
     items.value = []
     allItems.value = []
     wishlistProductIds.value = []
+    customOrder.value = []
     isLoaded.value = false
+  }
+
+  async function reorderItems(newOrder: string[]) {
+    try {
+      await ensureAuth()
+    } catch {
+      return
+    }
+    const prevOrder = customOrder.value
+    const prevAll = allItems.value
+    const prevItems = items.value
+
+    customOrder.value = newOrder
+    allItems.value = sortByCustomOrder(allItems.value, newOrder)
+    items.value = sortByCustomOrder(items.value, newOrder)
+
+    try {
+      await reorderWishlistApi(newOrder)
+    } catch (error) {
+      customOrder.value = prevOrder
+      allItems.value = prevAll
+      items.value = prevItems
+      console.error('Failed to reorder wishlist:', error)
+      throw error
+    }
   }
 
   return {
@@ -259,9 +324,11 @@ export function useWishlist() {
     markAsPurchased,
     unmarkAsPurchased,
     clearWishlist,
+    reorderItems,
     pendingItems,
     purchasedItems,
     pendingTotal,
     allItems,
+    customOrder,
   }
 }

@@ -65,6 +65,13 @@ watch(activeTab, (key) => {
     swiperRef.value.slideTo(idx)
 })
 
+// 心愿单自定义排序拖拽时，临时锁住 Swiper 的左右滑动，避免误触切换面板。
+function onWishlistDragState(dragging: boolean) {
+  const swiper = swiperRef.value
+  if (!swiper) return
+  swiper.allowTouchMove = !dragging
+}
+
 // const { loadWishlist } = useWishlist()
 
 async function fetchBoothData(id: string) {
@@ -189,7 +196,7 @@ onMounted(async () => {
                 @updated="selectedBoothId && fetchBoothData(selectedBoothId)" />
             </SwiperSlide>
             <SwiperSlide class="!flex flex-col min-h-0 px-4">
-              <WishlistPanel @highlight-booth="onHighlightBooth" />
+              <WishlistPanel @highlight-booth="onHighlightBooth" @drag-state="onWishlistDragState" />
             </SwiperSlide>
             <SwiperSlide class="!flex flex-col min-h-0 px-4">
               <InfoPanel />

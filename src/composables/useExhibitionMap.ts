@@ -223,6 +223,13 @@ export function useExhibitionMap(options: UseExhibitionMapOptions) {
     let pinchOriginX = 0
     let pinchOriginY = 0
 
+    const ensureCapture = (pointerId: number) => {
+      if (!viewport.hasPointerCapture(pointerId)) {
+        try { viewport.setPointerCapture(pointerId) }
+        catch { /* 某些浏览器在事件流中可能抛 InvalidStateError，忽略即可 */ }
+      }
+    }
+
     const onPtrDown = (e: PointerEvent) => {
       // 手势开始时取消正在进行的动画
       if (rafId !== null) {
@@ -230,14 +237,19 @@ export function useExhibitionMap(options: UseExhibitionMapOptions) {
         rafId = null
       }
       ptrs.set(e.pointerId, e)
-      viewport.setPointerCapture(e.pointerId)
 
       if (ptrs.size === 1) {
         panLastX = e.clientX
         panLastY = e.clientY
         pinchActive = false
+        // 注意：此处「不」立即 setPointerCapture。
+        // setPointerCapture 会同时把 compatibility mouse events（含 click）
+        // 劫持到 viewport，导致 SVG 上的 @click 永远收不到——展位点不动。
+        // 真正需要捕获是在「拖动开始」之后，见 onPtrMove。
       }
       else if (ptrs.size === 2) {
+        // 双指 pinch 必须立刻捕获，否则手指滑出 viewport 会丢事件
+        for (const p of ptrs.values()) ensureCapture(p.pointerId)
         const [a, b] = [...ptrs.values()]
         pinchActive = true
         pinchStartDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
@@ -261,6 +273,8 @@ export function useExhibitionMap(options: UseExhibitionMapOptions) {
         zoomAt(svg, pinchStartScale * dist / pinchStartDist, pinchOriginX, pinchOriginY)
       }
       else if (!pinchActive && ptrs.size === 1) {
+        // 仅在缩放后真的能 pan 时才捕获指针，避免 scale=1 的轻微抖动也劫持 click
+        if (getScale() > 1) ensureCapture(e.pointerId)
         panBy(svg, e.clientX - panLastX, e.clientY - panLastY)
         panLastX = e.clientX
         panLastY = e.clientY

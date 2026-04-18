@@ -143,6 +143,13 @@ export async function unmarkWishlistPurchased(productId: string): Promise<Wishli
   })
 }
 
+export async function reorderWishlistApi(productIds: string[]): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>('/api/wishlist/reorder', {
+    method: 'PATCH',
+    body: { productIds },
+  })
+}
+
 export async function uploadImage(file: File): Promise<UploadImageResult> {
   const form = new FormData()
   form.append('file', file)

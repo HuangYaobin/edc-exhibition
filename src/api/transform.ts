@@ -10,7 +10,7 @@ export function transformBoothToBrand(booth: Booth): Brand | null {
       exhibitionProducts: booth.products?.map((p) => ({
         productName: p.name,
         productImage: p.imageUrl || '/imgs/default/empty.png',
-        productDescription: p.description,
+        productDescription: p.description ?? undefined,
         productPrice: p.price != null ? String(p.price / 100) : undefined,
         productStock: p.totalQuantity != null ? String(p.totalQuantity) : undefined,
       })) || [],
@@ -22,7 +22,7 @@ export function transformBoothToBrand(booth: Booth): Brand | null {
   const products: Product[] = (booth.products || []).map((p) => ({
     productName: p.name,
     productImage: p.imageUrl || '/imgs/default/empty.png',
-    productDescription: p.description,
+    productDescription: p.description ?? undefined,
     productPrice: p.price != null ? String(p.price / 100) : undefined,
     productStock: p.totalQuantity != null ? String(p.totalQuantity) : undefined,
   }))
@@ -34,7 +34,7 @@ export function transformBoothToBrand(booth: Booth): Brand | null {
   return {
     name: primaryBrand.name,
     logo: primaryBrand.logoUrl || '/imgs/default/empty.png',
-    description: primaryBrand.description,
+    description: primaryBrand.description ?? undefined,
     exhibitionNumber: booth.boothNumber,
     exhibitionProducts: products,
     exhibitionGifts: gifts,
@@ -52,7 +52,7 @@ export function transformBoothToBrands(booth: Booth): Brand[] {
     const products: Product[] = (booth.products || []).map((p) => ({
       productName: p.name,
       productImage: p.imageUrl || '/imgs/default/empty.png',
-      productDescription: p.description,
+      productDescription: p.description ?? undefined,
       productPrice: p.price != null ? String(p.price / 100) : undefined,
       productStock: p.totalQuantity != null ? String(p.totalQuantity) : undefined,
     }))
@@ -60,7 +60,7 @@ export function transformBoothToBrands(booth: Booth): Brand[] {
     return {
       name: brand.name,
       logo: brand.logoUrl || '/imgs/default/empty.png',
-      description: brand.description,
+      description: brand.description ?? undefined,
       exhibitionNumber: booth.boothNumber,
       exhibitionProducts: products,
       exhibitionGifts: [],
