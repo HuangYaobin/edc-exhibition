@@ -20,6 +20,13 @@ function handleLogoError(brandId: string) {
   failedLogos.value.add(brandId)
 }
 
+function onSearchFocus() {
+  setTimeout(() => {
+    window.scrollTo(0, 0)
+    document.body.scrollTop = 0
+  }, 100)
+}
+
 const filteredBrands = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
   if (!q) return brandEntries.value
@@ -48,11 +55,12 @@ onMounted(async () => {
 <template>
   <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
     <!-- Search bar -->
-    <div class="px-1 pb-2 shrink-0">
+    <div class="px-1 pb-2 shrink-0 sticky top-0 bg-[#080808] z-10">
       <div class="flex items-center gap-2 bg-zinc-800 rounded-xl px-3 py-2  transition-colors">
         <i class="i-carbon-search text-zinc-500 text-sm shrink-0" />
         <input v-model="searchQuery" type="search" placeholder="搜索品牌…"
-          class="flex-1 min-w-0 bg-transparent text-zinc-200 text-base outline-none placeholder-zinc-600" />
+          class="flex-1 min-w-0 bg-transparent text-zinc-200 text-base outline-none placeholder-zinc-600"
+          @focus="onSearchFocus" />
       </div>
     </div>
 
